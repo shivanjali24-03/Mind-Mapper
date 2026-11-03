@@ -69,4 +69,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-Built by [@shivanjali24-03](https://github.com/shivanjali24-03)
+Built by [Shivanjali Desai](https://github.com/shivanjali24-03)
