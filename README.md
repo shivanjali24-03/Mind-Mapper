@@ -1,70 +1,66 @@
-# Getting Started with Create React App
+<div align="center">
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# 🧠 Mind Mapper
 
-## Available Scripts
+**A full-stack app for capturing ideas as mind maps and saving them to the cloud.**
 
-In the project directory, you can run:
+![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express_5-000000?style=for-the-badge&logo=express&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 
-### `npm start`
+</div>
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## What it does
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Mind Mapper lets you organise thoughts as a **mind map**: one central title with connected ideas (nodes) around it. Each map is saved to **MongoDB** through a REST API, so your ideas are still there next time.
 
-### `npm test`
+## How it works
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```mermaid
+flowchart LR
+    UI[React app] -- fetch JSON --> API[Express API<br/>/api/mindmaps]
+    API -- Mongoose --> DB[(MongoDB)]
+```
 
-### `npm run build`
+| Layer | Tech | What it does |
+|---|---|---|
+| Frontend | React 19 | The user interface |
+| Backend | Node.js + Express 5 | REST API with JSON in and JSON out |
+| Database | MongoDB + Mongoose | Stores each map's `title`, `nodes` and `createdAt` |
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## API
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+| Method | Endpoint | What it does |
+|---|---|---|
+| `POST` | `/api/mindmaps` | Create a new mind map |
+| `GET` | `/api/mindmaps` | Get all mind maps |
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Run it locally
 
-### `npm run eject`
+**You need:** Node.js 18+ and a MongoDB database (local, or a free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster).
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```bash
+# 1. Backend
+cd server
+npm install
+echo "MONGO_URI=your_mongodb_connection_string" > .env
+node server.js              # runs on http://localhost:5000
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# 2. Frontend (in a new terminal, from the project root)
+npm install
+npm start                   # opens on http://localhost:3000
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Other scripts in the project root: `npm test` runs the tests, and `npm run build` makes a production build.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Roadmap
 
-## Learn More
+- [ ] Drag-and-drop visual node editor
+- [ ] Update and delete endpoints (full CRUD)
+- [ ] User accounts
+- [ ] Live demo
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Built by [@shivanjali24-03](https://github.com/shivanjali24-03)
