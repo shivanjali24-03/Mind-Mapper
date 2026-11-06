@@ -1,7 +1,7 @@
-import { Brain, X } from 'lucide-react';
+import { Brain, Compass, Sparkles, X } from 'lucide-react';
 import { TEMPLATES } from '../lib/mapOps.js';
 
-export function EmptyState({ onCreate }) {
+export function EmptyState({ onCreate, onLoadDemo, onTour }) {
   return (
     <div className="empty">
       <div className="empty__icon" aria-hidden="true">
@@ -18,6 +18,14 @@ export function EmptyState({ onCreate }) {
             </span>
           </button>
         ))}
+      </div>
+      <div className="empty__actions">
+        <button className="btn btn--ghost" onClick={onLoadDemo}>
+          <Sparkles size={15} /> Load demo maps
+        </button>
+        <button className="btn btn--ghost" onClick={onTour}>
+          <Compass size={15} /> Take the tour
+        </button>
       </div>
     </div>
   );

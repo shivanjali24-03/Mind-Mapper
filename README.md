@@ -30,6 +30,8 @@
 | 🖼️ **Export** | Download the whole map as a PNG |
 | 🌗 **Light & dark** | Follows your system theme, with a one-click toggle |
 | 📱 **Responsive** | Slide-in sidebar and bottom-sheet inspector on phones |
+| 🧭 **Guided tour** | A 9-step interactive walkthrough with a spotlight on each control. It starts on the first visit and can be replayed from **Guide** |
+| 🎲 **Demo data** | Four realistic sample maps (patient portal plan, sprint planning, React learning path, team sync) load on the first visit, or any time with **Load demo maps** |
 | 🔌 **Works offline** | If the API or database isn't available, it switches to a local demo mode that saves in the browser |
 
 ## 📸 Screenshots
@@ -55,7 +57,8 @@ flowchart LR
 
 - **`src/lib/mapOps.js`**: pure, unit-tested logic for adding, removing and laying out ideas (no React inside).
 - **`src/api/storage.js`**: one interface for saving maps. It checks `/api/health` and uses the API when the database is connected, otherwise localStorage.
-- **`src/components/`**: `MindNode`, `Sidebar`, `Toolbar`, `Inspector` and dialogs.
+- **`src/lib/demoData.js`**: builds the sample maps from a simple nested outline.
+- **`src/components/`**: `MindNode`, `Sidebar`, `Toolbar`, `Inspector`, `Tour` (guided walkthrough) and dialogs.
 - **`server/`**: Express 5 + Mongoose, with input validation and clean JSON errors.
 
 ## 🔌 API

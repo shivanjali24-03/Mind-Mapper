@@ -18,6 +18,8 @@ import Sidebar from './components/Sidebar.jsx';
 import Toolbar from './components/Toolbar.jsx';
 import Inspector from './components/Inspector.jsx';
 import { EmptyState, ShortcutsDialog, Toast } from './components/Overlays.jsx';
+import Tour from './components/Tour.jsx';
+import { buildDemoMaps } from './lib/demoData.js';
 import { TEMPLATES, addChild, addSibling, childrenOf, layoutTree, removeWithDescendants } from './lib/mapOps.js';
 import * as storage from './api/storage.js';
 
@@ -27,6 +29,8 @@ const minimapColor = (n) => MINIMAP_COLORS[n.data?.color] ?? '#8b5cf6';
 const defaultEdgeOptions = { type: 'smoothstep', className: 'mind-edge' };
 const LAST_KEY = 'mindmapper.last';
 const THEME_KEY = 'mindmapper.theme';
+const SEEDED_KEY = 'mindmapper.seeded';
+const TOUR_KEY = 'mindmapper.tourDone';
 
 // Only persist what matters, so selection or measuring doesn't trigger saves
 const snapshot = (title, nodes, edges) =>
@@ -67,6 +71,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [help, setHelp] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
   const [toast, setToast] = useState('');
   const savedRef = useRef('');
   const toastTimer = useRef(null);
@@ -106,18 +111,42 @@ export default function App() {
     [fitView, notify],
   );
 
-  // First load: detect API vs local, list maps, reopen the last one
+  const seedDemo = useCallback(async () => {
+    for (const m of buildDemoMaps().reverse()) await storage.createMap(m);
+    safeSet(SEEDED_KEY, '1');
+    return storage.listMaps();
+  }, []);
+
+  // First load: detect API vs local, add demo maps for first-time visitors, reopen the last map
+  const started = useRef(false);
   useEffect(() => {
+    if (started.current) return; // StrictMode runs effects twice in development
+    started.current = true;
     (async () => {
       setMode(await storage.detectMode());
-      const list = await storage.listMaps();
+      let list = await storage.listMaps();
+      if (!list.length && !safeGet(SEEDED_KEY)) list = await seedDemo();
       setMaps(list);
       setLoaded(true);
       const last = safeGet(LAST_KEY);
       const target = list.find((m) => m.id === last) ?? list[0];
-      if (target) openMap(target.id);
+      if (target) await openMap(target.id);
+      // Show the guided tour once, after the map has settled on screen
+      if (!safeGet(TOUR_KEY)) setTimeout(() => setTourOpen(true), 700);
     })();
-  }, [openMap]);
+  }, [openMap, seedDemo]);
+
+  const loadDemo = async () => {
+    const list = await seedDemo();
+    setMaps(list);
+    await openMap(list[0].id);
+    notify('Demo maps added');
+  };
+
+  const closeTour = useCallback(() => {
+    setTourOpen(false);
+    safeSet(TOUR_KEY, '1');
+  }, []);
 
   // Autosave (debounced)
   const save = useCallback(async () => {
@@ -256,7 +285,7 @@ export default function App() {
         save();
         return;
       }
-      if (isTyping(document.activeElement) || help) return;
+      if (isTyping(document.activeElement) || help || tourOpen) return;
       if (e.key === 'Tab' && selected) {
         e.preventDefault();
         add('child');
@@ -275,7 +304,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -298,6 +327,11 @@ export default function App() {
         onCreate={createMap}
         onDelete={deleteMap}
         onClose={() => setSidebarOpen(false)}
+        onLoadDemo={loadDemo}
+        onTour={() => {
+          setSidebarOpen(false);
+          setTourOpen(true);
+        }}
       />
       {sidebarOpen && <div className="scrim" onClick={() => setSidebarOpen(false)} />}
 
@@ -319,8 +353,9 @@ export default function App() {
               onExport={exportPng}
               onTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               onHelp={() => setHelp(true)}
+              onTour={() => setTourOpen(true)}
             />
-            <div className="canvas">
+            <div className="canvas" data-tour="canvas">
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -352,7 +387,7 @@ export default function App() {
               <button className="icon-btn floating-menu" onClick={() => setSidebarOpen(true)} aria-label="Open maps">
                 ☰
               </button>
-              <EmptyState onCreate={createMap} />
+              <EmptyState onCreate={createMap} onLoadDemo={loadDemo} onTour={() => setTourOpen(true)} />
             </>
           )
         )}
@@ -370,6 +405,7 @@ export default function App() {
       )}
 
       {help && <ShortcutsDialog onClose={() => setHelp(false)} />}
+      <Tour open={tourOpen} onClose={closeTour} />
       <Toast message={toast} />
     </div>
   );

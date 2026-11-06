@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, Cloud, HardDrive, Map, Plus, Search, Trash2, X } from 'lucide-react';
+import { Check, Cloud, Compass, HardDrive, Map, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { TEMPLATES } from '../lib/mapOps.js';
 
 const timeAgo = (iso) => {
@@ -10,7 +10,7 @@ const timeAgo = (iso) => {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
-export default function Sidebar({ maps, activeId, mode, open, onSelect, onCreate, onDelete, onClose }) {
+export default function Sidebar({ maps, activeId, mode, open, onSelect, onCreate, onDelete, onClose, onLoadDemo, onTour }) {
   const [query, setQuery] = useState('');
   const [menu, setMenu] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
@@ -32,7 +32,7 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onCreate
         </button>
       </div>
 
-      <div className="new-map">
+      <div className="new-map" data-tour="new-map">
         <button className="btn btn--primary btn--block" onClick={() => setMenu((v) => !v)} aria-expanded={menu}>
           <Plus size={16} /> New map
         </button>
@@ -60,7 +60,7 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onCreate
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search maps" aria-label="Search maps" />
       </label>
 
-      <nav className="map-list">
+      <nav className="map-list" data-tour="map-list">
         {filtered.length === 0 && <p className="map-list__empty">{maps.length ? 'No maps match your search.' : 'No maps yet.'}</p>}
         {filtered.map((m) => (
           <div key={m.id} className={`map-item${m.id === activeId ? ' is-active' : ''}`}>
@@ -85,6 +85,15 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onCreate
           </div>
         ))}
       </nav>
+
+      <div className="sidebar__footer">
+        <button className="link-btn" onClick={onLoadDemo}>
+          <Sparkles size={15} /> Load demo maps
+        </button>
+        <button className="link-btn" onClick={onTour}>
+          <Compass size={15} /> Take the tour
+        </button>
+      </div>
 
       <div className={`mode mode--${mode}`} title={mode === 'api' ? 'Saved to the server' : 'Saved in this browser only'}>
         {mode === 'api' ? <Cloud size={14} /> : <HardDrive size={14} />}

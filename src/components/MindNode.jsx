@@ -23,6 +23,7 @@ function MindNode({ id, data, selected }) {
     <div
       className={`mind-node c-${data.color}${data.root ? ' is-root' : ''}${selected ? ' is-selected' : ''}`}
       onDoubleClick={() => setEditing(true)}
+      data-tour={data.root ? 'root-node' : undefined}
     >
       {!data.root && <Handle type="target" position={Position.Left} className="mind-handle" />}
       {editing ? (
