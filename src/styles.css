@@ -981,3 +981,92 @@ kbd {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
+
+/* ---------- Template gallery ---------- */
+.dialog--wide {
+  width: min(880px, 100%);
+  max-height: min(720px, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+}
+.tpl {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  text-align: left;
+}
+.tpl__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tpl__search {
+  flex: 0 1 220px;
+}
+.chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.chip {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.chip:hover {
+  color: var(--text);
+}
+.chip.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.tpl__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.tpl--compact .tpl__grid {
+  max-height: 520px;
+}
+.tpl__empty {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  text-align: center;
+}
+.template-card__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 6px;
+  border-radius: 11px;
+  font-size: 20px;
+  background: var(--accent-soft);
+}
+.template-card__desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.4;
+  flex: 1;
+}
+.template-card__count {
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.empty {
+  max-width: 920px;
+}
