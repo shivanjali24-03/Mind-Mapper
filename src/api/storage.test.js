@@ -27,6 +27,11 @@ describe('storage (local demo mode)', () => {
     expect((await listMaps()).map((m) => m.title)).toEqual(['A2', 'B']);
   });
 
+  it('gives every map a unique id, even when created at the same moment', async () => {
+    const made = await Promise.all(Array.from({ length: 20 }, (_, i) => createMap({ title: `M${i}`, nodes: [], edges: [] })));
+    expect(new Set(made.map((m) => m.id)).size).toBe(20);
+  });
+
   it('throws for a missing map', async () => {
     await expect(getMap('nope')).rejects.toThrow('not found');
   });

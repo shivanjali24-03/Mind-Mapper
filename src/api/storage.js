@@ -67,7 +67,9 @@ export async function createMap({ title, nodes, edges }) {
   if ((await detectMode()) === 'api') {
     return fromApi(await http('', { method: 'POST', body: JSON.stringify({ title, nodes, edges }) }));
   }
-  const map = { id: `local_${Date.now().toString(36)}`, title, nodes, edges, createdAt: now(), updatedAt: now() };
+  // Time + random part: unique even when several maps are created in the same millisecond
+  const id = `local_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const map = { id, title, nodes, edges, createdAt: now(), updatedAt: now() };
   writeLocal([map, ...readLocal()]);
   return map;
 }
