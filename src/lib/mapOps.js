@@ -53,24 +53,66 @@ export function removeWithDescendants(nodes, edges, ids) {
   };
 }
 
+export const X_GAP = 280;
+export const Y_GAP = 68;
+// Approximate rendered heights, used to centre each node on its band
+export const nodeHeight = (n) => (n.data.root ? 56 : 42);
+
+/**
+ * Tidy tree layout: the root sits at (0, 0), each level is X_GAP to the right,
+ * and every branch gets vertical space in proportion to how many leaves it has,
+ * so sub-branches never overlap. Nodes not connected to the root keep their position.
+ */
+export function layoutTree(nodes, edges) {
+  const root = nodes.find((n) => n.data.root) ?? nodes[0];
+  if (!root) return nodes;
+  const ids = new Set(nodes.map((n) => n.id));
+  const kids = (id) => childrenOf(edges, id).filter((k) => ids.has(k));
+
+  const leaves = new Map();
+  const visiting = new Set();
+  const count = (id) => {
+    if (leaves.has(id)) return leaves.get(id);
+    if (visiting.has(id)) return 0; // guard against cycles
+    visiting.add(id);
+    const k = kids(id);
+    const total = k.length ? Math.max(1, k.reduce((s, c) => s + count(c), 0)) : 1;
+    leaves.set(id, total);
+    return total;
+  };
+
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const pos = new Map();
+  const place = (id, depth, top) => {
+    if (pos.has(id)) return;
+    const centre = top + (count(id) * Y_GAP) / 2;
+    pos.set(id, { x: depth * X_GAP, y: centre - nodeHeight(byId.get(id)) / 2 });
+    let cursor = top;
+    for (const c of kids(id)) {
+      place(c, depth + 1, cursor);
+      cursor += count(c) * Y_GAP;
+    }
+  };
+  place(root.id, 0, -(count(root.id) * Y_GAP) / 2);
+
+  return nodes.map((n) => (pos.has(n.id) ? { ...n, position: pos.get(n.id) } : n));
+}
+
 function tree(rootLabel, branches) {
-  const root = makeNode({ id: 'root', label: rootLabel, root: true });
-  let nodes = [root];
+  let nodes = [makeNode({ id: 'root', label: rootLabel, root: true })];
   let edges = [];
-  branches.forEach(([label, kids = []], i) => {
+  const rename = (list, id, label) => list.map((n) => (n.id === id ? { ...n, data: { ...n.data, label } } : n));
+  branches.forEach(([label, kids = []]) => {
     const r = addChild(nodes, edges, 'root');
-    nodes = r.nodes.map((n) => (n.id === r.node.id ? { ...n, data: { ...n.data, label } } : n));
+    nodes = rename(r.nodes, r.node.id, label);
     edges = r.edges;
-    nodes = nodes.map((n) =>
-      n.id === r.node.id ? { ...n, position: { x: 260, y: (i - (branches.length - 1) / 2) * 170 } } : n,
-    );
     kids.forEach((kid) => {
       const k = addChild(nodes, edges, r.node.id);
-      nodes = k.nodes.map((n) => (n.id === k.node.id ? { ...n, data: { ...n.data, label: kid } } : n));
+      nodes = rename(k.nodes, k.node.id, kid);
       edges = k.edges;
     });
   });
-  return { nodes, edges };
+  return { nodes: layoutTree(nodes, edges), edges };
 }
 
 export const TEMPLATES = {

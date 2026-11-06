@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addChild, addSibling, makeNode, removeWithDescendants, TEMPLATES } from './mapOps.js';
+import { addChild, addSibling, layoutTree, makeNode, nodeHeight, removeWithDescendants, TEMPLATES, X_GAP } from './mapOps.js';
 
 const root = () => makeNode({ id: 'root', label: 'Root', root: true });
 
@@ -45,6 +45,50 @@ describe('removeWithDescendants', () => {
   it('never removes the root', () => {
     const r = removeWithDescendants([root()], [], ['root']);
     expect(r.nodes).toHaveLength(1);
+  });
+});
+
+describe('layoutTree', () => {
+  const overlaps = (nodes) => {
+    const seen = new Set();
+    for (const n of nodes) {
+      const key = `${n.position.x}:${Math.round(n.position.y)}`;
+      if (seen.has(key)) return true;
+      seen.add(key);
+    }
+    return false;
+  };
+
+  it('places the root at the origin and children one level to the right', () => {
+    const a = addChild([root()], [], 'root');
+    const nodes = layoutTree(a.nodes, a.edges);
+    const r = nodes.find((n) => n.id === 'root');
+    expect(r.position.x).toBe(0);
+    expect(r.position.y + nodeHeight(r) / 2).toBe(0); // root is centred on y = 0
+    expect(nodes.find((n) => n.id === a.node.id).position.x).toBe(X_GAP);
+  });
+
+  it('never stacks two nodes in the same spot, even with uneven branches', () => {
+    let s = { nodes: [root()], edges: [] };
+    const a = addChild(s.nodes, s.edges, 'root');
+    const b = addChild(a.nodes, a.edges, 'root');
+    s = b;
+    for (let i = 0; i < 4; i++) s = addChild(s.nodes, s.edges, a.node.id);
+    for (let i = 0; i < 3; i++) s = addChild(s.nodes, s.edges, b.node.id);
+    expect(overlaps(layoutTree(s.nodes, s.edges))).toBe(false);
+  });
+
+  it('keeps sibling subtrees in separate vertical bands', () => {
+    let s = addChild([root()], [], 'root');
+    const first = s.node;
+    s = addChild(s.nodes, s.edges, 'root');
+    const second = s.node;
+    for (let i = 0; i < 3; i++) s = addChild(s.nodes, s.edges, first.id);
+    const laid = layoutTree(s.nodes, s.edges);
+    const lowestOfFirst = Math.max(
+      ...laid.filter((n) => s.edges.some((e) => e.source === first.id && e.target === n.id)).map((n) => n.position.y),
+    );
+    expect(laid.find((n) => n.id === second.id).position.y).toBeGreaterThan(lowestOfFirst);
   });
 });
 
