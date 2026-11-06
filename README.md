@@ -2,64 +2,105 @@
 
 # 🧠 Mind Mapper
 
-**A full-stack app for capturing ideas as mind maps and saving them to the cloud.**
+**A fast, visual mind-mapping app. Capture ideas, connect them and keep them organised automatically.**
 
 ![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![React Flow](https://img.shields.io/badge/React_Flow-FF0072?style=for-the-badge&logo=react&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![Express](https://img.shields.io/badge/Express_5-000000?style=for-the-badge&logo=express&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![Vitest](https://img.shields.io/badge/Tested_with-Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)
+
+<img src="docs/screenshots/editor-dark.png" alt="Mind Mapper editor in dark mode" width="100%"/>
 
 </div>
 
-## What it does
+## ✨ Features
 
-Mind Mapper lets you organise thoughts as a **mind map**: one central title with connected ideas (nodes) around it. Each map is saved to **MongoDB** through a REST API, so your ideas are still there next time.
+| | |
+|:--|:--|
+| 🎨 **Visual editor** | Drag ideas, connect them, zoom and pan on an infinite canvas (React Flow) |
+| 🌳 **Auto-arrange** | A tidy tree layout keeps branches from overlapping, however big the map gets |
+| ⌨️ **Keyboard first** | `Tab` adds a child, `Enter` a sibling, `Del` deletes a branch, `T` tidies, `F` fits to screen |
+| 📝 **Inspector panel** | Edit text, pick from 6 colours and add notes to any idea |
+| 💾 **Autosave** | Changes save automatically, with a live "Saving… / Saved" status |
+| 🗂️ **Many maps** | Sidebar with search, quick switching and safe two-step delete |
+| 🚀 **Templates** | Start from Blank, Project plan, SWOT analysis or Meeting notes |
+| 🖼️ **Export** | Download the whole map as a PNG |
+| 🌗 **Light & dark** | Follows your system theme, with a one-click toggle |
+| 📱 **Responsive** | Slide-in sidebar and bottom-sheet inspector on phones |
+| 🔌 **Works offline** | If the API or database isn't available, it switches to a local demo mode that saves in the browser |
 
-## How it works
+## 📸 Screenshots
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/templates.png" alt="Start screen with templates"/><br/><sub>Start screen with templates</sub></td>
+<td width="50%"><img src="docs/screenshots/editor-light.png" alt="Editor in light mode with the inspector open"/><br/><sub>Light mode with the inspector panel</sub></td>
+</tr>
+</table>
+
+<p align="center"><img src="docs/screenshots/mobile.png" alt="Mobile view" width="260"/><br/><sub>Mobile view</sub></p>
+
+## 🏗️ How it works
 
 ```mermaid
 flowchart LR
-    UI[React app] -- fetch JSON --> API[Express API<br/>/api/mindmaps]
+    UI[React + React Flow UI] --> S{Storage layer}
+    S -- "API online" --> API[Express REST API<br/>/api/mindmaps]
     API -- Mongoose --> DB[(MongoDB)]
+    S -- "offline / no DB" --> LS[(Browser localStorage)]
 ```
 
-| Layer | Tech | What it does |
-|---|---|---|
-| Frontend | React 19 | The user interface |
-| Backend | Node.js + Express 5 | REST API with JSON in and JSON out |
-| Database | MongoDB + Mongoose | Stores each map's `title`, `nodes` and `createdAt` |
+- **`src/lib/mapOps.js`**: pure, unit-tested logic for adding, removing and laying out ideas (no React inside).
+- **`src/api/storage.js`**: one interface for saving maps. It checks `/api/health` and uses the API when the database is connected, otherwise localStorage.
+- **`src/components/`**: `MindNode`, `Sidebar`, `Toolbar`, `Inspector` and dialogs.
+- **`server/`**: Express 5 + Mongoose, with input validation and clean JSON errors.
 
-## API
+## 🔌 API
 
 | Method | Endpoint | What it does |
 |---|---|---|
-| `POST` | `/api/mindmaps` | Create a new mind map |
-| `GET` | `/api/mindmaps` | Get all mind maps |
+| `GET` | `/api/health` | Server status and whether the database is connected |
+| `GET` | `/api/mindmaps` | List maps (title and dates only) |
+| `GET` | `/api/mindmaps/:id` | Get one map with its nodes and edges |
+| `POST` | `/api/mindmaps` | Create a map |
+| `PUT` | `/api/mindmaps/:id` | Update the title, nodes or edges |
+| `DELETE` | `/api/mindmaps/:id` | Delete a map |
 
-## Run it locally
+## 🚀 Run it locally
 
-**You need:** Node.js 18+ and a MongoDB database (local, or a free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster).
+**You need:** Node.js 18+. MongoDB is optional; without it the app runs in local demo mode.
 
 ```bash
-# 1. Backend
-cd server
+# 1. Install
 npm install
-echo "MONGO_URI=your_mongodb_connection_string" > .env
-node server.js              # runs on http://localhost:5000
+cd server && npm install && cd ..
 
-# 2. Frontend (in a new terminal, from the project root)
-npm install
-npm start                   # opens on http://localhost:3000
+# 2. (Optional) connect MongoDB
+cp server/.env.example server/.env      # then add your MONGO_URI
+
+# 3. Start the API (terminal 1)
+npm run server                          # http://localhost:5000
+
+# 4. Start the app (terminal 2)
+npm run dev                             # http://localhost:3000
 ```
 
-Other scripts in the project root: `npm test` runs the tests, and `npm run build` makes a production build.
+| Script | What it does |
+|---|---|
+| `npm run dev` | Start the app with hot reload (API calls are proxied to port 5000) |
+| `npm run build` | Production build into `dist/` |
+| `npm test` | Run the unit tests (Vitest) |
+| `npm run server` | Start the Express API |
 
-## Roadmap
+## 🗺️ Roadmap
 
-- [ ] Drag-and-drop visual node editor
-- [ ] Update and delete endpoints (full CRUD)
-- [ ] User accounts
-- [ ] Live demo
+- [ ] Undo / redo (Command pattern)
+- [ ] Export to PDF and JSON import/export
+- [ ] Real-time collaboration (Socket.IO)
+- [ ] Live demo deployment
 
 ---
 
