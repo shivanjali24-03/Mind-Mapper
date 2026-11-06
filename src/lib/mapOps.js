@@ -115,10 +115,36 @@ function tree(rootLabel, branches) {
   return { nodes: layoutTree(nodes, edges), edges };
 }
 
+// Each template: name, icon, category, short description and a builder.
+// tree() takes [branch, [children...]] pairs and lays them out automatically.
+export const TEMPLATE_CATEGORIES = ['Basics', 'Work', 'Strategy', 'Personal'];
+
 export const TEMPLATES = {
-  blank: { name: 'Blank map', build: () => tree('Central idea', []) },
+  blank: {
+    name: 'Blank map',
+    icon: '🧠',
+    category: 'Basics',
+    description: 'Start from a single central idea',
+    build: () => tree('Central idea', []),
+  },
+  brainstorm: {
+    name: 'Brainstorm',
+    icon: '💡',
+    category: 'Basics',
+    description: 'Capture ideas, questions and next steps',
+    build: () =>
+      tree('Big idea', [
+        ['Ideas', ['Idea 1', 'Idea 2', 'Idea 3']],
+        ['Questions', ['What problem does it solve?']],
+        ['Inspiration', ['Examples we like']],
+        ['Next steps', ['Pick top 3']],
+      ]),
+  },
   project: {
     name: 'Project plan',
+    icon: '🚀',
+    category: 'Work',
+    description: 'Goals, timeline, team and risks',
     build: () =>
       tree('Project launch', [
         ['Goals', ['Ship v1', 'Grow users']],
@@ -127,8 +153,61 @@ export const TEMPLATES = {
         ['Risks', ['Scope creep']],
       ]),
   },
+  roadmap: {
+    name: 'Product roadmap',
+    icon: '🗺️',
+    category: 'Work',
+    description: 'Now, next and later, plus success metrics',
+    build: () =>
+      tree('Product roadmap', [
+        ['Now', ['User login', 'Dashboard v1']],
+        ['Next', ['Reports', 'Mobile layout']],
+        ['Later', ['Integrations', 'Public API']],
+        ['Metrics', ['Weekly active users', 'Churn rate']],
+      ]),
+  },
+  meeting: {
+    name: 'Meeting notes',
+    icon: '📝',
+    category: 'Work',
+    description: 'Agenda, decisions and action items',
+    build: () =>
+      tree('Weekly sync', [
+        ['Agenda', ['Updates', 'Blockers']],
+        ['Decisions', []],
+        ['Action items', ['Owner + date']],
+      ]),
+  },
+  retro: {
+    name: 'Sprint retrospective',
+    icon: '🔁',
+    category: 'Work',
+    description: 'What went well, what to improve, actions',
+    build: () =>
+      tree('Sprint retro', [
+        ['Went well', ['Shipped on time', 'Good teamwork']],
+        ['To improve', ['Too many meetings', 'Unclear tickets']],
+        ['Ideas', ['Pair programming']],
+        ['Action items', ['Owner + due date']],
+      ]),
+  },
+  okr: {
+    name: 'Goals & OKRs',
+    icon: '🎯',
+    category: 'Work',
+    description: 'Objectives with measurable key results',
+    build: () =>
+      tree('Quarter goals', [
+        ['Objective: Delight customers', ['KR: NPS above 50', 'KR: Reply within 2h']],
+        ['Objective: Grow revenue', ['KR: +20% MRR', 'KR: 30 new clients']],
+        ['Objective: Ship faster', ['KR: Weekly releases']],
+      ]),
+  },
   swot: {
     name: 'SWOT analysis',
+    icon: '📊',
+    category: 'Strategy',
+    description: 'Strengths, weaknesses, opportunities, threats',
     build: () =>
       tree('SWOT', [
         ['Strengths', ['Fast delivery']],
@@ -137,13 +216,111 @@ export const TEMPLATES = {
         ['Threats', ['Competitors']],
       ]),
   },
-  meeting: {
-    name: 'Meeting notes',
+  decision: {
+    name: 'Decision making',
+    icon: '⚖️',
+    category: 'Strategy',
+    description: 'Compare options with pros and cons',
     build: () =>
-      tree('Weekly sync', [
-        ['Agenda', ['Updates', 'Blockers']],
-        ['Decisions', []],
-        ['Action items', ['Owner + date']],
+      tree('Which option?', [
+        ['Option A', ['Pro: cheaper', 'Con: slower']],
+        ['Option B', ['Pro: faster', 'Con: costs more']],
+        ['Criteria', ['Budget', 'Time', 'Risk']],
+        ['Decision', ['Chosen option + why']],
+      ]),
+  },
+  problem: {
+    name: 'Problem solving',
+    icon: '🔍',
+    category: 'Strategy',
+    description: 'Problem, root causes, solutions and plan',
+    build: () =>
+      tree('The problem', [
+        ['Symptoms', ['What we see']],
+        ['Root causes (5 Whys)', ['Why 1', 'Why 2', 'Why 3']],
+        ['Possible solutions', ['Quick fix', 'Long-term fix']],
+        ['Action plan', ['Who, what, when']],
+      ]),
+  },
+  journey: {
+    name: 'Customer journey',
+    icon: '🧭',
+    category: 'Strategy',
+    description: 'From first contact to loyal customer',
+    build: () =>
+      tree('Customer journey', [
+        ['Awareness', ['Social media', 'Search']],
+        ['Consideration', ['Website visit', 'Free trial']],
+        ['Purchase', ['Checkout']],
+        ['Onboarding', ['Welcome email', 'First success']],
+        ['Loyalty', ['Referrals', 'Reviews']],
+      ]),
+  },
+  business: {
+    name: 'Business model',
+    icon: '💼',
+    category: 'Strategy',
+    description: 'Lean canvas: problem, value, customers, money',
+    build: () =>
+      tree('Business model', [
+        ['Problem', ['Top 3 problems']],
+        ['Customers', ['Early adopters']],
+        ['Value proposition', ['Why us?']],
+        ['Channels', ['How we reach them']],
+        ['Revenue', ['Pricing']],
+        ['Costs', ['Main expenses']],
+      ]),
+  },
+  study: {
+    name: 'Study notes',
+    icon: '📚',
+    category: 'Personal',
+    description: 'Key concepts, examples and revision plan',
+    build: () =>
+      tree('Topic', [
+        ['Key concepts', ['Concept 1', 'Concept 2']],
+        ['Examples', ['Example 1']],
+        ['Questions', ['What is unclear?']],
+        ['Revision plan', ['Day 1', 'Day 3', 'Day 7']],
+      ]),
+  },
+  weekly: {
+    name: 'Weekly planner',
+    icon: '🗓️',
+    category: 'Personal',
+    description: 'Plan work, health, learning and fun',
+    build: () =>
+      tree('This week', [
+        ['Work', ['Top 3 tasks']],
+        ['Learning', ['1 course lesson']],
+        ['Health', ['3 workouts', 'Sleep by 11']],
+        ['Personal', ['Call family']],
+      ]),
+  },
+  event: {
+    name: 'Event planning',
+    icon: '🎉',
+    category: 'Personal',
+    description: 'Venue, guests, budget and schedule',
+    build: () =>
+      tree('Event', [
+        ['Venue', ['Options', 'Booking']],
+        ['Guests', ['Invite list', 'RSVPs']],
+        ['Budget', ['Food', 'Decor']],
+        ['Schedule', ['Start', 'Main activity', 'Close']],
+        ['To-do', ['Send invites']],
+      ]),
+  },
+  book: {
+    name: 'Book summary',
+    icon: '📖',
+    category: 'Personal',
+    description: 'Big ideas, favourite quotes and actions',
+    build: () =>
+      tree('Book title', [
+        ['Big ideas', ['Idea 1', 'Idea 2', 'Idea 3']],
+        ['Favourite quotes', ['Quote 1']],
+        ['What I will do', ['Action 1']],
       ]),
   },
 };

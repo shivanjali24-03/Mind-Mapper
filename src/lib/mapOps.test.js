@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addChild, addSibling, layoutTree, makeNode, nodeHeight, removeWithDescendants, TEMPLATES, X_GAP } from './mapOps.js';
+import { addChild, addSibling, layoutTree, makeNode, nodeHeight, removeWithDescendants, TEMPLATE_CATEGORIES, TEMPLATES, X_GAP } from './mapOps.js';
 
 const root = () => makeNode({ id: 'root', label: 'Root', root: true });
 
@@ -93,6 +93,19 @@ describe('layoutTree', () => {
 });
 
 describe('templates', () => {
+  it('every template has a name, icon, known category and description', () => {
+    for (const t of Object.values(TEMPLATES)) {
+      expect(t.name).toBeTruthy();
+      expect(t.icon).toBeTruthy();
+      expect(TEMPLATE_CATEGORIES).toContain(t.category);
+      expect(t.description).toBeTruthy();
+    }
+  });
+
+  it('offers plenty of templates', () => {
+    expect(Object.keys(TEMPLATES).length).toBeGreaterThanOrEqual(16);
+  });
+
   it.each(Object.keys(TEMPLATES))('%s builds a connected tree with one root', (key) => {
     const { nodes, edges } = TEMPLATES[key].build();
     expect(nodes.filter((n) => n.data.root)).toHaveLength(1);
