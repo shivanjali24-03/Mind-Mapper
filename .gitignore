@@ -1,14 +1,14 @@
-# Node backend
-server/node_modules
-node_modules
-server/.env
-
-# React frontend
-client/node_modules
-client/.env
 
 # Build files
-client/build
-
+# Node backend
 # OS files
+# React frontend
 .DS_Store
+.env
+client/.env
+client/build
+client/node_modules
+dist/
+node_modules
+server/.env
+server/node_modules
