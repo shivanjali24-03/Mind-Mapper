@@ -19,6 +19,7 @@ import Toolbar from './components/Toolbar.jsx';
 import Inspector from './components/Inspector.jsx';
 import { EmptyState, ShortcutsDialog, Toast } from './components/Overlays.jsx';
 import Tour from './components/Tour.jsx';
+import { TemplateGallery } from './components/Templates.jsx';
 import { buildDemoMaps } from './lib/demoData.js';
 import { TEMPLATES, addChild, addSibling, childrenOf, layoutTree, removeWithDescendants } from './lib/mapOps.js';
 import * as storage from './api/storage.js';
@@ -72,6 +73,7 @@ export default function App() {
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [help, setHelp] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [toast, setToast] = useState('');
   const savedRef = useRef('');
   const toastTimer = useRef(null);
@@ -285,7 +287,7 @@ export default function App() {
         save();
         return;
       }
-      if (isTyping(document.activeElement) || help || tourOpen) return;
+      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen) return;
       if (e.key === 'Tab' && selected) {
         e.preventDefault();
         add('child');
@@ -304,7 +306,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -324,7 +326,10 @@ export default function App() {
         mode={mode}
         open={sidebarOpen}
         onSelect={openMap}
-        onCreate={createMap}
+        onNewMap={() => {
+          setSidebarOpen(false);
+          setGalleryOpen(true);
+        }}
         onDelete={deleteMap}
         onClose={() => setSidebarOpen(false)}
         onLoadDemo={loadDemo}
@@ -405,6 +410,15 @@ export default function App() {
       )}
 
       {help && <ShortcutsDialog onClose={() => setHelp(false)} />}
+      {galleryOpen && (
+        <TemplateGallery
+          onPick={(key) => {
+            setGalleryOpen(false);
+            createMap(key);
+          }}
+          onClose={() => setGalleryOpen(false)}
+        />
+      )}
       <Tour open={tourOpen} onClose={closeTour} />
       <Toast message={toast} />
     </div>

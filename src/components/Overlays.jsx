@@ -1,5 +1,5 @@
 import { Brain, Compass, Sparkles, X } from 'lucide-react';
-import { TEMPLATES } from '../lib/mapOps.js';
+import { TemplateGrid } from './Templates.jsx';
 
 export function EmptyState({ onCreate, onLoadDemo, onTour }) {
   return (
@@ -9,16 +9,7 @@ export function EmptyState({ onCreate, onLoadDemo, onTour }) {
       </div>
       <h1>Map out your ideas</h1>
       <p>Start from a blank canvas or pick a template. Your work saves automatically.</p>
-      <div className="empty__grid">
-        {Object.entries(TEMPLATES).map(([key, t]) => (
-          <button key={key} className="template-card" onClick={() => onCreate(key)}>
-            <span className="template-card__name">{t.name}</span>
-            <span className="template-card__count">
-              {t.build().nodes.length} {t.build().nodes.length === 1 ? 'idea' : 'ideas'}
-            </span>
-          </button>
-        ))}
-      </div>
+      <TemplateGrid onPick={onCreate} />
       <div className="empty__actions">
         <button className="btn btn--ghost" onClick={onLoadDemo}>
           <Sparkles size={15} /> Load demo maps

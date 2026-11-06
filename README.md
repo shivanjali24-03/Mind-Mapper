@@ -26,7 +26,7 @@
 | 📝 **Inspector panel** | Edit text, pick from 6 colours and add notes to any idea |
 | 💾 **Autosave** | Changes save automatically, with a live "Saving… / Saved" status |
 | 🗂️ **Many maps** | Sidebar with search, quick switching and safe two-step delete |
-| 🚀 **Templates** | Start from Blank, Project plan, SWOT analysis or Meeting notes |
+| 🚀 **16 templates** | A searchable gallery with categories. **Basics:** Blank, Brainstorm · **Work:** Project plan, Product roadmap, Meeting notes, Sprint retrospective, Goals &amp; OKRs · **Strategy:** SWOT, Decision making, Problem solving (5 Whys), Customer journey, Business model · **Personal:** Study notes, Weekly planner, Event planning, Book summary |
 | 🖼️ **Export** | Download the whole map as a PNG |
 | 🌗 **Light & dark** | Follows your system theme, with a one-click toggle |
 | 📱 **Responsive** | Slide-in sidebar and bottom-sheet inspector on phones |

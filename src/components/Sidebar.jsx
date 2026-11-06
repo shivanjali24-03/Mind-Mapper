@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Check, Cloud, Compass, HardDrive, Map, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
-import { TEMPLATES } from '../lib/mapOps.js';
 
 const timeAgo = (iso) => {
   const s = Math.max(1, Math.round((Date.now() - new Date(iso)) / 1000));
@@ -10,9 +9,8 @@ const timeAgo = (iso) => {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
-export default function Sidebar({ maps, activeId, mode, open, onSelect, onCreate, onDelete, onClose, onLoadDemo, onTour }) {
+export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap, onDelete, onClose, onLoadDemo, onTour }) {
   const [query, setQuery] = useState('');
-  const [menu, setMenu] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
 
   const filtered = useMemo(
@@ -33,26 +31,9 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onCreate
       </div>
 
       <div className="new-map" data-tour="new-map">
-        <button className="btn btn--primary btn--block" onClick={() => setMenu((v) => !v)} aria-expanded={menu}>
+        <button className="btn btn--primary btn--block" onClick={onNewMap}>
           <Plus size={16} /> New map
         </button>
-        {menu && (
-          <div className="menu" role="menu">
-            {Object.entries(TEMPLATES).map(([key, t]) => (
-              <button
-                key={key}
-                role="menuitem"
-                className="menu__item"
-                onClick={() => {
-                  setMenu(false);
-                  onCreate(key);
-                }}
-              >
-                {t.name}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       <label className="search">

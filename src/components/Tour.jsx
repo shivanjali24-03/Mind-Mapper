@@ -11,7 +11,7 @@ export const TOUR_STEPS = [
   {
     target: 'new-map',
     title: 'Create a map',
-    body: 'Click **New map** and pick a template (Blank, Project plan, SWOT or Meeting notes).',
+    body: 'Click **New map** to open the template gallery: 16 templates for work, strategy and personal planning.',
   },
   {
     target: 'map-list',
