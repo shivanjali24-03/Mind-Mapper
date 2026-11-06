@@ -9,8 +9,6 @@
 ![Express](https://img.shields.io/badge/Express_5-000000?style=for-the-badge&logo=express&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 
-![License: MIT](https://img.shields.io/badge/License-MIT-a855f7?style=for-the-badge)
-
 </div>
 
 ## What it does
@@ -62,10 +60,6 @@ Other scripts in the project root: `npm test` runs the tests, and `npm run build
 - [ ] Update and delete endpoints (full CRUD)
 - [ ] User accounts
 - [ ] Live demo
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
 
 ---
 
