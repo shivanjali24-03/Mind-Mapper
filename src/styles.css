@@ -857,3 +857,127 @@ kbd {
     max-height: 46vh;
   }
 }
+
+/* ---------- Guided tour ---------- */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+.tour__dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 24, 0.55);
+  animation: fade 0.2s ease-out;
+}
+.tour__spot {
+  position: absolute;
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(10, 8, 24, 0.55), 0 0 0 2px var(--accent), 0 0 24px 4px color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease;
+  pointer-events: none;
+  animation: pulse-ring 1.8s ease-in-out infinite;
+}
+.tour__card {
+  position: absolute;
+  width: min(320px, calc(100vw - 32px));
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  transition: left 0.3s ease, top 0.3s ease;
+  animation: pop 0.2s ease-out;
+}
+.tour__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -4px -6px 4px 0;
+}
+.tour__count {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.tour__card h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+.tour__card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.tour__card p b {
+  color: var(--text);
+}
+.tour__dots {
+  display: flex;
+  gap: 5px;
+  margin: 14px 0 12px;
+}
+.tour__dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--border);
+  transition: width 0.2s, background 0.2s;
+}
+.tour__dots span.is-on {
+  width: 18px;
+  background: var(--accent);
+}
+.tour__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+@keyframes pulse-ring {
+  50% {
+    box-shadow: 0 0 0 9999px rgba(10, 8, 24, 0.55), 0 0 0 3px var(--accent), 0 0 34px 8px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+/* Sidebar extras */
+.sidebar__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.link-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: left;
+}
+.link-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.empty__actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.toolbar__tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 10px;
+}
+.btn--guide {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
