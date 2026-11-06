@@ -1,0 +1,95 @@
+import { useMemo, useState } from 'react';
+import { Check, Cloud, HardDrive, Map, Plus, Search, Trash2, X } from 'lucide-react';
+import { TEMPLATES } from '../lib/mapOps.js';
+
+const timeAgo = (iso) => {
+  const s = Math.max(1, Math.round((Date.now() - new Date(iso)) / 1000));
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+};
+
+export default function Sidebar({ maps, activeId, mode, open, onSelect, onCreate, onDelete, onClose }) {
+  const [query, setQuery] = useState('');
+  const [menu, setMenu] = useState(false);
+  const [confirmId, setConfirmId] = useState(null);
+
+  const filtered = useMemo(
+    () => maps.filter((m) => m.title.toLowerCase().includes(query.trim().toLowerCase())),
+    [maps, query],
+  );
+
+  return (
+    <aside className={`sidebar${open ? ' is-open' : ''}`} aria-label="Your mind maps">
+      <div className="brand">
+        <span className="brand__mark" aria-hidden="true">
+          <Map size={18} />
+        </span>
+        <span className="brand__name">Mind Mapper</span>
+        <button className="icon-btn sidebar__close" onClick={onClose} aria-label="Close sidebar">
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="new-map">
+        <button className="btn btn--primary btn--block" onClick={() => setMenu((v) => !v)} aria-expanded={menu}>
+          <Plus size={16} /> New map
+        </button>
+        {menu && (
+          <div className="menu" role="menu">
+            {Object.entries(TEMPLATES).map(([key, t]) => (
+              <button
+                key={key}
+                role="menuitem"
+                className="menu__item"
+                onClick={() => {
+                  setMenu(false);
+                  onCreate(key);
+                }}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <label className="search">
+        <Search size={15} aria-hidden="true" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search maps" aria-label="Search maps" />
+      </label>
+
+      <nav className="map-list">
+        {filtered.length === 0 && <p className="map-list__empty">{maps.length ? 'No maps match your search.' : 'No maps yet.'}</p>}
+        {filtered.map((m) => (
+          <div key={m.id} className={`map-item${m.id === activeId ? ' is-active' : ''}`}>
+            <button className="map-item__main" onClick={() => onSelect(m.id)}>
+              <span className="map-item__title">{m.title}</span>
+              <span className="map-item__time">{timeAgo(m.updatedAt)}</span>
+            </button>
+            {confirmId === m.id ? (
+              <span className="map-item__confirm">
+                <button className="icon-btn icon-btn--danger" onClick={() => onDelete(m.id)} aria-label={`Confirm delete ${m.title}`}>
+                  <Check size={15} />
+                </button>
+                <button className="icon-btn" onClick={() => setConfirmId(null)} aria-label="Cancel delete">
+                  <X size={15} />
+                </button>
+              </span>
+            ) : (
+              <button className="icon-btn map-item__delete" onClick={() => setConfirmId(m.id)} aria-label={`Delete ${m.title}`}>
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
+        ))}
+      </nav>
+
+      <div className={`mode mode--${mode}`} title={mode === 'api' ? 'Saved to the server' : 'Saved in this browser only'}>
+        {mode === 'api' ? <Cloud size={14} /> : <HardDrive size={14} />}
+        {mode === 'api' ? 'Cloud sync on' : 'Local demo mode'}
+      </div>
+    </aside>
+  );
+}
