@@ -8,13 +8,17 @@ import {
   FileImage,
   FileJson,
   FileText,
+  ClipboardCopy,
+  ListTree,
   GitBranchPlus,
   Keyboard,
+  ListChecks,
   Loader,
   Maximize,
   Menu,
   Moon,
   Network,
+  Presentation,
   Redo2,
   Search,
   Sun,
@@ -46,10 +50,16 @@ export default function Toolbar({
   onUndo,
   onRedo,
   onSearch,
+  onTasks,
+  tasksOpen,
+  openTaskCount,
   onExport,
   onTheme,
   onHelp,
   onTour,
+  onPresent,
+  viewMode,
+  onViewMode,
 }) {
   const S = STATUS[status] ?? STATUS.saved;
   const [exportOpen, setExportOpen] = useState(false);
@@ -73,6 +83,16 @@ export default function Toolbar({
         <Menu size={18} />
       </button>
       <input className="title-input" value={title} onChange={(e) => onTitle(e.target.value)} aria-label="Map title" maxLength={120} />
+      <div className="segmented" role="tablist" aria-label="View">
+        {[
+          ['map', 'Map'],
+          ['outline', 'Outline'],
+        ].map(([key, text]) => (
+          <button key={key} role="tab" aria-selected={viewMode === key} className={viewMode === key ? 'is-on' : ''} onClick={() => onViewMode(key)}>
+            {text}
+          </button>
+        ))}
+      </div>
       <span className={`status status--${status}`} role="status" data-tour="status">
         <S.icon size={14} className={status === 'saving' ? 'spin' : ''} /> {S.text}
       </span>
@@ -86,6 +106,16 @@ export default function Toolbar({
         </button>
         <button className="icon-btn" onClick={onSearch} title="Search ideas (Ctrl/⌘+K)" aria-label="Search ideas">
           <Search size={17} />
+        </button>
+        <button
+          className={`icon-btn tasks-btn${tasksOpen ? ' is-on' : ''}`}
+          onClick={onTasks}
+          title="Tasks"
+          aria-label={`Tasks (${openTaskCount} open)`}
+          aria-pressed={tasksOpen}
+        >
+          <ListChecks size={17} />
+          {openTaskCount > 0 && <span className="count-badge">{openTaskCount}</span>}
         </button>
         <span className="toolbar__sep" />
         <button className="btn btn--ghost" onClick={onAddChild} disabled={!hasSelection} title="Add child (Tab)" data-tour="add-child">
@@ -127,6 +157,12 @@ export default function Toolbar({
               <button role="menuitem" className="menu__item" onClick={() => pick('json')}>
                 <FileJson size={15} /> Backup (JSON)
               </button>
+              <button role="menuitem" className="menu__item" onClick={() => pick('md')}>
+                <ListTree size={15} /> Outline (Markdown)
+              </button>
+              <button role="menuitem" className="menu__item" onClick={() => pick('copy-outline')}>
+                <ClipboardCopy size={15} /> Copy as outline
+              </button>
             </div>
           )}
         </span>
@@ -134,6 +170,9 @@ export default function Toolbar({
           {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
         </button>
         </span>
+        <button className="btn btn--ghost" onClick={onPresent} title="Present this map (full screen)">
+          <Presentation size={16} /> <span className="btn__text">Present</span>
+        </button>
         <button className="btn btn--ghost btn--guide" onClick={onTour} title="Guided tour" data-tour="guide">
           <Compass size={16} /> <span className="btn__text">Guide</span>
         </button>
