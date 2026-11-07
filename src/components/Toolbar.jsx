@@ -8,6 +8,8 @@ import {
   FileImage,
   FileJson,
   FileText,
+  ClipboardCopy,
+  ListTree,
   GitBranchPlus,
   Keyboard,
   Loader,
@@ -126,6 +128,12 @@ export default function Toolbar({
               </button>
               <button role="menuitem" className="menu__item" onClick={() => pick('json')}>
                 <FileJson size={15} /> Backup (JSON)
+              </button>
+              <button role="menuitem" className="menu__item" onClick={() => pick('md')}>
+                <ListTree size={15} /> Outline (Markdown)
+              </button>
+              <button role="menuitem" className="menu__item" onClick={() => pick('copy-outline')}>
+                <ClipboardCopy size={15} /> Copy as outline
               </button>
             </div>
           )}
