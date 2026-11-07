@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import serviceWorker from './pwa/plugin.js';
 
 export default defineConfig({
   // GitHub Pages serves the demo from /Mind-Mapper/
   base: process.env.BASE_PATH || '/',
-  plugins: [react()],
+  plugins: [react(), serviceWorker()],
   build: {
     rollupOptions: {
       output: {
