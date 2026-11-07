@@ -24,6 +24,7 @@ import { buildDemoMaps } from './lib/demoData.js';
 import { TEMPLATES, addChild, addSibling, childrenOf, layoutTree, removeWithDescendants } from './lib/mapOps.js';
 import * as storage from './api/storage.js';
 import { canRedo, canUndo, emptyHistory, record, redo, undo } from './lib/history.js';
+import { fileName, parseFile, toFile } from './lib/mapFile.js';
 
 const nodeTypes = { mind: MindNode };
 const MINIMAP_COLORS = { violet: '#8b5cf6', cyan: '#06b6d4', pink: '#ec4899', amber: '#f59e0b', emerald: '#10b981', slate: '#64748b' };
@@ -264,30 +265,67 @@ export default function App() {
   const updateSelected = (patch) =>
     setNodes((ns) => ns.map((n) => (n.id === selected?.id ? { ...n, data: { ...n.data, ...patch } } : n)));
 
-  // Export the whole map as a PNG
-  const exportPng = async () => {
+  // ---- Export & import ----
+  const download = (href, name) => {
+    const a = document.createElement('a');
+    a.download = name;
+    a.href = href;
+    a.click();
+  };
+
+  // Render the whole map (not just the visible part) to a PNG data URL
+  const renderPng = async () => {
     const all = getNodes();
-    if (!all.length) return;
     const width = 1600;
     const height = 1000;
-    const bounds = getNodesBounds(all);
-    const vp = getViewportForBounds(bounds, width, height, 0.2, 2, 0.12);
+    const vp = getViewportForBounds(getNodesBounds(all), width, height, 0.2, 2, 0.12);
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim();
+    const { toPng } = await import('html-to-image'); // only loaded when exporting
+    const url = await toPng(document.querySelector('.react-flow__viewport'), {
+      backgroundColor: bg,
+      width,
+      height,
+      pixelRatio: 2,
+      style: { width: `${width}px`, height: `${height}px`, transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})` },
+    });
+    return { url, width, height };
+  };
+
+  const exportAs = async (kind) => {
+    if (!getNodes().length) return;
     try {
-      const { toPng } = await import('html-to-image'); // only needed when exporting
-      const url = await toPng(document.querySelector('.react-flow__viewport'), {
-        backgroundColor: bg,
-        width,
-        height,
-        style: { width: `${width}px`, height: `${height}px`, transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})` },
-      });
-      const a = document.createElement('a');
-      a.download = `${(title || 'mind-map').replace(/[^\w-]+/g, '-').toLowerCase()}.png`;
-      a.href = url;
-      a.click();
-      notify('PNG exported');
+      if (kind === 'json') {
+        const blob = new Blob([toFile({ title, nodes, edges })], { type: 'application/json' });
+        const href = URL.createObjectURL(blob);
+        download(href, fileName(title, 'json'));
+        setTimeout(() => URL.revokeObjectURL(href), 1000);
+      } else {
+        const { url, width, height } = await renderPng();
+        if (kind === 'png') download(url, fileName(title, 'png'));
+        else {
+          const { jsPDF } = await import('jspdf'); // only loaded when exporting a PDF
+          const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [width, height + 60] });
+          pdf.setFontSize(22);
+          pdf.text(title || 'Mind map', 32, 40);
+          pdf.addImage(url, 'PNG', 0, 60, width, height);
+          pdf.save(fileName(title, 'pdf'));
+        }
+      }
+      notify(`${kind.toUpperCase()} exported`);
     } catch {
       notify('Export failed');
+    }
+  };
+
+  const importFile = async (file) => {
+    try {
+      const map = parseFile(await file.text());
+      const created = await storage.createMap(map);
+      setMaps((list) => [{ id: created.id, title: created.title, updatedAt: created.updatedAt }, ...list]);
+      await openMap(created.id);
+      notify(`Imported "${created.title}"`);
+    } catch (err) {
+      notify(err.message || 'Import failed');
     }
   };
 
@@ -403,6 +441,7 @@ export default function App() {
         onDelete={deleteMap}
         onClose={() => setSidebarOpen(false)}
         onLoadDemo={loadDemo}
+        onImport={importFile}
         onTour={() => {
           setSidebarOpen(false);
           setTourOpen(true);
@@ -429,7 +468,7 @@ export default function App() {
               canRedo={canRedo(history)}
               onUndo={doUndo}
               onRedo={doRedo}
-              onExport={exportPng}
+              onExport={exportAs}
               onTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               onHelp={() => setHelp(true)}
               onTour={() => setTourOpen(true)}
