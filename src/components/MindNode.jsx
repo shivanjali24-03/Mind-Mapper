@@ -1,11 +1,15 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { Minus, StickyNote } from 'lucide-react';
+import { Check, Minus, StickyNote } from 'lucide-react';
+import ProgressRing from './ProgressRing.jsx';
+import { dueStatus, shortDate } from '../lib/tasks.js';
 import { useView } from './viewContext.js';
 
 function MindNode({ id, data, selected }) {
   const { updateNodeData } = useReactFlow();
-  const { childCounts, hiddenCounts, matches, currentMatch, toggleCollapse, editRequest } = useView();
+  const { childCounts, hiddenCounts, matches, currentMatch, toggleCollapse, editRequest, progress, toggleTask } = useView();
+  const task = data.task;
+  const prog = progress[id];
   const kids = childCounts[id] ?? 0;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(data.label);
@@ -28,11 +32,24 @@ function MindNode({ id, data, selected }) {
 
   return (
     <div
-      className={`mind-node c-${data.color}${data.root ? ' is-root' : ''}${selected ? ' is-selected' : ''}${matches.has(id) ? ' is-match' : ''}${currentMatch === id ? ' is-current' : ''}`}
+      className={`mind-node c-${data.color}${data.root ? ' is-root' : ''}${selected ? ' is-selected' : ''}${matches.has(id) ? ' is-match' : ''}${currentMatch === id ? ' is-current' : ''}${task?.done ? ' is-done' : ''}`}
       onDoubleClick={() => setEditing(true)}
       data-tour={data.root ? 'root-node' : undefined}
     >
       {!data.root && <Handle type="target" position={Position.Left} className="mind-handle" />}
+      {task && (
+        <button
+          className={`task-check nodrag${task.done ? ' is-on' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleTask(id);
+          }}
+          onDoubleClick={(e) => e.stopPropagation()}
+          aria-label={task.done ? 'Mark as not done' : 'Mark as done'}
+        >
+          {task.done && <Check size={12} strokeWidth={3} />}
+        </button>
+      )}
       {editing ? (
         <input
           ref={inputRef}
@@ -53,6 +70,12 @@ function MindNode({ id, data, selected }) {
       ) : (
         <span className="mind-node__label">{data.label}</span>
       )}
+      {task?.due && !task.done && (
+        <span className={`due due--${dueStatus(task.due)}`} title={`Due ${task.due}`}>
+          {shortDate(task.due)}
+        </span>
+      )}
+      {prog && <ProgressRing done={prog.done} total={prog.total} />}
       {data.notes && <StickyNote className="mind-node__note" size={13} aria-label="Has notes" />}
       <Handle type="source" position={Position.Right} className="mind-handle" />
       {kids > 0 && (

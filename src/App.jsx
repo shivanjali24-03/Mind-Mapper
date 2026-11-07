@@ -30,6 +30,8 @@ import { fileName, parseFile, toFile } from './lib/mapFile.js';
 import { addOutlineUnder, countOutline, mapFromOutline, parseOutline, toOutline } from './lib/outline.js';
 import { descendants, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
 import { navigate } from './lib/navigate.js';
+import { rollUpProgress, taskList } from './lib/tasks.js';
+import TasksPanel from './components/TasksPanel.jsx';
 import { ViewContext } from './components/viewContext.js';
 import SearchBar from './components/SearchBar.jsx';
 
@@ -89,6 +91,7 @@ export default function App() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [editRequest, setEditRequest] = useState(null);
+  const [tasksOpen, setTasksOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [matchIndex, setMatchIndex] = useState(0);
@@ -393,6 +396,28 @@ export default function App() {
     }
   };
 
+  // ---- Tasks ----
+  const progress = useMemo(() => rollUpProgress(nodes, edges), [nodes, edges]);
+  const openTaskCount = useMemo(() => taskList(nodes).length, [nodes]);
+
+  // Tick or untick a task; an idea that isn't a task yet becomes one
+  const toggleTask = useCallback((id) => {
+    setNodes((ns) =>
+      ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, task: n.data.task ? { ...n.data.task, done: !n.data.task.done } : { done: false } } } : n)),
+    );
+  }, []);
+
+  const selectAndShow = useCallback(
+    (id) => {
+      let next = latest.current.nodes;
+      if (hiddenIds(next, edges).has(id)) next = layoutTree(revealNode(next, edges, id), edges);
+      setNodes(next.map((n) => ({ ...n, selected: n.id === id })));
+      const p = next.find((n) => n.id === id)?.position;
+      if (p) setCenter(p.x + 90, p.y + 21, { zoom: Math.max(getZoom(), 0.8), duration: 250 });
+    },
+    [edges, setCenter, getZoom],
+  );
+
   // ---- Collapse & search ----
   const hidden = useMemo(() => hiddenIds(nodes, edges), [nodes, edges]);
   const viewNodes = useMemo(() => (hidden.size ? nodes.map((n) => (hidden.has(n.id) ? { ...n, hidden: true } : n)) : nodes), [nodes, hidden]);
@@ -444,8 +469,8 @@ export default function App() {
     for (const e of edges) childCounts[e.source] = (childCounts[e.source] ?? 0) + 1;
     const hiddenCounts = {};
     for (const n of nodes) if (n.data.collapsed) hiddenCounts[n.id] = descendants(edges, n.id).size;
-    return { childCounts, hiddenCounts, matches: new Set(searchOpen ? matches : []), currentMatch: searchOpen ? currentMatch : null, toggleCollapse, editRequest };
-  }, [nodes, edges, matches, currentMatch, searchOpen, toggleCollapse, editRequest]);
+    return { childCounts, hiddenCounts, matches: new Set(searchOpen ? matches : []), currentMatch: searchOpen ? currentMatch : null, toggleCollapse, editRequest, progress, toggleTask };
+  }, [nodes, edges, matches, currentMatch, searchOpen, toggleCollapse, editRequest, progress, toggleTask]);
 
   // ---- Keyboard navigation ----
   // Pan only if the newly selected idea is outside the visible canvas
@@ -552,6 +577,11 @@ export default function App() {
         moveSelection(ARROWS[e.key]);
         return;
       }
+      if (e.key.toLowerCase() === 'x' && selected && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        toggleTask(selected.id);
+        return;
+      }
       if ((e.key === 'F2' || e.key === ' ') && selected) {
         e.preventDefault();
         setEditRequest({ id: selected.id, at: Date.now() });
@@ -575,7 +605,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection, toggleTask]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -588,7 +618,7 @@ export default function App() {
   const childCount = useMemo(() => (selected ? childrenOf(edges, selected.id).length : 0), [selected, edges]);
 
   return (
-    <div className={`app${selected && inspectorOpen ? ' has-inspector' : ''}`}>
+    <div className={`app${(selected && inspectorOpen) || (tasksOpen && activeId) ? ' has-inspector' : ''}`}>
       <Sidebar
         maps={maps}
         activeId={activeId}
@@ -634,6 +664,9 @@ export default function App() {
               onUndo={doUndo}
               onRedo={doRedo}
               onSearch={() => setSearchOpen(true)}
+              onTasks={() => setTasksOpen((v) => !v)}
+              tasksOpen={tasksOpen}
+              openTaskCount={openTaskCount}
               onExport={exportAs}
               onTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               onHelp={() => setHelp(true)}
@@ -695,7 +728,10 @@ export default function App() {
         )}
       </main>
 
-      {selected && inspectorOpen && (
+      {tasksOpen && activeId && (
+        <TasksPanel nodes={nodes} onToggle={toggleTask} onSelect={selectAndShow} onClose={() => setTasksOpen(false)} />
+      )}
+      {!tasksOpen && selected && inspectorOpen && (
         <Inspector
           node={selected}
           childCount={childCount}
