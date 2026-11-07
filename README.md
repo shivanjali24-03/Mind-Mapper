@@ -30,6 +30,7 @@
 | 🔍 **Search & collapse** | Ctrl/⌘+K searches ideas and notes, highlights matches and jumps between them. Collapse any branch with one click; a badge shows how many ideas are hidden, and search opens collapsed branches automatically |
 | 📋 **Paste to map** | Paste notes, bullet lists or Markdown from anywhere and get an instant map. Paste onto a selected idea to add branches; copy any map back as an outline or download it as Markdown. Checkboxes become tasks |
 | ✅ **Tasks & progress** | Turn any idea into a task (press `X`) with a due date and priority. Branches show a progress ring, due dates are colour-coded (overdue, today, soon), and the **Tasks** panel lists everything open by due date. Brainstorm to project plan in one place |
+| 🗒️ **Outline view** | Switch between **Map** and **Outline** (an editable bullet list of the same map). `Enter` new line, `Tab` / `Shift+Tab` indent and outdent, `Alt+↑↓` reorder, `⌫` on an empty line deletes it. Changes show on the map instantly |
 | 📝 **Inspector panel** | Edit text, pick from 6 colours and add notes to any idea |
 | 💾 **Autosave** | Changes save automatically, with a live "Saving… / Saved" status |
 | 🗂️ **Many maps** | Sidebar with search, quick switching and safe two-step delete |
