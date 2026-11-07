@@ -1,9 +1,11 @@
 import { GitBranchPlus, Trash2, X } from 'lucide-react';
+import { PRIORITIES } from '../lib/tasks.js';
 import { COLORS } from '../lib/mapOps.js';
 
 export default function Inspector({ node, childCount, onChange, onAddChild, onDelete, onClose }) {
   if (!node) return null;
-  const { label, color, notes, root } = node.data;
+  const { label, color, notes, root, task } = node.data;
+  const setTask = (patch) => onChange({ task: { ...(task ?? { done: false }), ...patch } });
   return (
     <aside className="inspector" aria-label="Selected idea">
       <div className="inspector__head">
@@ -31,6 +33,39 @@ export default function Inspector({ node, childCount, onChange, onAddChild, onDe
             />
           ))}
         </div>
+      </fieldset>
+
+      <fieldset className="field task-fields">
+        <legend>Task</legend>
+        <label className="check-line">
+          <input type="checkbox" checked={!!task} onChange={(e) => onChange({ task: e.target.checked ? { done: false } : undefined })} />
+          This idea is a task
+        </label>
+        {task && (
+          <>
+            <label className="check-line">
+              <input type="checkbox" checked={task.done} onChange={(e) => setTask({ done: e.target.checked })} />
+              Done
+            </label>
+            <div className="task-row2">
+              <label className="field field--inline">
+                <span>Due date</span>
+                <input type="date" value={task.due ?? ''} onChange={(e) => setTask({ due: e.target.value || undefined })} />
+              </label>
+              <label className="field field--inline">
+                <span>Priority</span>
+                <select value={task.priority ?? ''} onChange={(e) => setTask({ priority: e.target.value || undefined })}>
+                  <option value="">None</option>
+                  {PRIORITIES.map((p) => (
+                    <option key={p} value={p}>
+                      {p[0].toUpperCase() + p.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </>
+        )}
       </fieldset>
 
       <label className="field">
