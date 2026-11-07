@@ -11,8 +11,10 @@ import {
   Menu,
   Moon,
   Network,
+  Redo2,
   Sun,
   Trash2,
+  Undo2,
 } from 'lucide-react';
 
 const STATUS = {
@@ -34,6 +36,10 @@ export default function Toolbar({
   onDelete,
   onFit,
   onTidy,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   onExport,
   onTheme,
   onHelp,
@@ -51,6 +57,13 @@ export default function Toolbar({
       </span>
 
       <div className="toolbar__group" role="toolbar" aria-label="Map actions">
+        <button className="icon-btn" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl/⌘+Z)" aria-label="Undo">
+          <Undo2 size={17} />
+        </button>
+        <button className="icon-btn" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl/⌘+Shift+Z)" aria-label="Redo">
+          <Redo2 size={17} />
+        </button>
+        <span className="toolbar__sep" />
         <button className="btn btn--ghost" onClick={onAddChild} disabled={!hasSelection} title="Add child (Tab)" data-tour="add-child">
           <GitBranchPlus size={16} /> <span className="btn__text">Child</span>
         </button>
