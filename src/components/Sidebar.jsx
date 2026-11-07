@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Check, Cloud, Compass, HardDrive, Map, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Check, Cloud, Compass, HardDrive, Map, Plus, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
 
 const timeAgo = (iso) => {
   const s = Math.max(1, Math.round((Date.now() - new Date(iso)) / 1000));
@@ -9,9 +9,10 @@ const timeAgo = (iso) => {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
-export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap, onDelete, onClose, onLoadDemo, onTour }) {
+export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap, onDelete, onClose, onLoadDemo, onTour, onImport }) {
   const [query, setQuery] = useState('');
   const [confirmId, setConfirmId] = useState(null);
+  const fileRef = useRef(null);
 
   const filtered = useMemo(
     () => maps.filter((m) => m.title.toLowerCase().includes(query.trim().toLowerCase())),
@@ -71,6 +72,20 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap
         <button className="link-btn" onClick={onLoadDemo}>
           <Sparkles size={15} /> Load demo maps
         </button>
+        <button className="link-btn" onClick={() => fileRef.current?.click()}>
+          <Upload size={15} /> Import JSON
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = ''; // allow importing the same file twice
+            if (file) onImport(file);
+          }}
+        />
         <button className="link-btn" onClick={onTour}>
           <Compass size={15} /> Take the tour
         </button>
