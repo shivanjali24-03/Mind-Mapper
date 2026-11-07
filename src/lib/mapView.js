@@ -50,3 +50,17 @@ export function revealNode(nodes, edges, id) {
   const open = new Set(ancestors(edges, id));
   return nodes.map((n) => (open.has(n.id) && n.data.collapsed ? { ...n, data: { ...n.data, collapsed: false } } : n));
 }
+
+/** Focus mode: ids to hide so only `focusId` and everything below it stays visible. */
+export function focusHidden(nodes, edges, focusId) {
+  if (!focusId || !nodes.some((n) => n.id === focusId)) return new Set();
+  const keep = descendants(edges, focusId);
+  keep.add(focusId);
+  return new Set(nodes.filter((n) => !keep.has(n.id)).map((n) => n.id));
+}
+
+/** Breadcrumb from the central idea down to `id`: [{ id, label }]. */
+export function breadcrumb(nodes, edges, id) {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  return [...ancestors(edges, id).reverse(), id].filter((x) => byId.has(x)).map((x) => ({ id: x, label: byId.get(x).data.label || 'Untitled' }));
+}

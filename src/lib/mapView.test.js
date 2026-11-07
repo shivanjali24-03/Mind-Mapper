@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addChild, layoutTree, makeNode } from './mapOps.js';
-import { ancestors, descendants, hiddenIds, revealNode, searchNodes } from './mapView.js';
+import { ancestors, breadcrumb, descendants, focusHidden, hiddenIds, revealNode, searchNodes } from './mapView.js';
 
 // root -> a -> a1 -> a1x ; root -> b
 function sample() {
@@ -71,5 +71,28 @@ describe('layoutTree with collapsed branches', () => {
     const closed = layoutTree(collapse(nodes, ids.a), edges);
     const gap = (list) => list.find((n) => n.id === ids.b).position.y - list.find((n) => n.id === ids.a).position.y;
     expect(gap(closed)).toBeLessThanOrEqual(gap(open));
+  });
+});
+
+describe('focus mode', () => {
+  it('hides everything except the focused idea and its branches', () => {
+    const { nodes, edges, ids } = sample();
+    const hidden = focusHidden(nodes, edges, ids.a);
+    expect(hidden.has(ids.a)).toBe(false);
+    expect(hidden.has(ids.a1)).toBe(false);
+    expect(hidden.has(ids.a1x)).toBe(false);
+    expect(hidden.has('root')).toBe(true);
+    expect(hidden.has(ids.b)).toBe(true);
+  });
+
+  it('hides nothing without a focus, or for an unknown id', () => {
+    const { nodes, edges } = sample();
+    expect(focusHidden(nodes, edges, null).size).toBe(0);
+    expect(focusHidden(nodes, edges, 'nope').size).toBe(0);
+  });
+
+  it('builds a breadcrumb from the central idea down', () => {
+    const { nodes, edges, ids } = sample();
+    expect(breadcrumb(nodes, edges, ids.a1x).map((c) => c.label)).toEqual(['Root', 'Alpha', 'Apple pie', 'Crust']);
   });
 });

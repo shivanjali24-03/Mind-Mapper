@@ -32,6 +32,8 @@
 | ✅ **Tasks & progress** | Turn any idea into a task (press `X`) with a due date and priority. Branches show a progress ring, due dates are colour-coded (overdue, today, soon), and the **Tasks** panel lists everything open by due date. Brainstorm to project plan in one place |
 | 🗒️ **Outline view** | Switch between **Map** and **Outline** (an editable bullet list of the same map). `Enter` new line, `Tab` / `Shift+Tab` indent and outdent, `Alt+↑↓` reorder, `⌫` on an empty line deletes it. Changes show on the map instantly |
 | 🎤 **Presentation mode** | Click **Present** to show the map full screen: an overview, then one slide per branch. It zooms smoothly to each branch, dims the rest, and shows the idea's notes as speaker notes. `→`/`Space` next, `←` back, `Esc` exit |
+| 🎯 **Focus mode** | `Shift+F` (or the focus button) shows only the selected branch, with a clickable breadcrumb to move up. `Esc` returns to the full map |
+| 💎 **Free & Pro plans** | Free: 5 maps with all editing, tasks, outline and focus. Pro ($8/month or $72/year): unlimited maps, PDF/JSON export and import, and presentation mode. Friendly upgrade prompts explain what's included. *Demo checkout: no payment taken* |
 | 📝 **Inspector panel** | Edit text, pick from 6 colours and add notes to any idea |
 | 💾 **Autosave** | Changes save automatically, with a live "Saving… / Saved" status |
 | 🗂️ **Many maps** | Sidebar with search, quick switching and safe two-step delete |
@@ -41,6 +43,7 @@
 | 📱 **Responsive** | Slide-in sidebar and bottom-sheet inspector on phones |
 | 🧭 **Guided tour** | A 9-step interactive walkthrough with a spotlight on each control. It starts on the first visit and can be replayed from **Guide** |
 | 🎲 **Demo data** | Four realistic sample maps (patient portal plan, sprint planning, React learning path, team sync) load on the first visit, or any time with **Load demo maps** |
+| 📲 **Installable app** | Install Mind Mapper on desktop or phone ("Install app" in the sidebar, or the browser's install button). A service worker pre-caches the whole app, so it opens and works with no internet |
 | 🔌 **Works offline** | If the API or database isn't available, it switches to a local demo mode that saves in the browser |
 
 ## 📸 Screenshots
