@@ -1164,3 +1164,32 @@ kbd {
   font-size: 12px;
   white-space: nowrap;
 }
+
+/* Logo: the mark brings its own gradient background */
+.brand__mark,
+.empty__icon {
+  background: none;
+  padding: 0;
+  overflow: hidden;
+}
+.brand__mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+.empty__icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+}
+
+/* With the inspector open the toolbar is narrower: show icon-only buttons so the title stays readable */
+@media (max-width: 1600px) {
+  .app.has-inspector .btn__text {
+    display: none;
+  }
+  .app.has-inspector .toolbar .btn--ghost {
+    width: 36px;
+    padding: 0;
+  }
+}
