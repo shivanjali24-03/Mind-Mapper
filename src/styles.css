@@ -1912,3 +1912,8 @@ kbd {
     display: none;
   }
 }
+@media (max-width: 1600px) {
+  .app.has-inspector .toolbar .btn .pro-tag {
+    display: none;
+  }
+}
