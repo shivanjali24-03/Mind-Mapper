@@ -36,7 +36,12 @@ export default [
     rules: { 'no-unused-vars': ['error', { argsIgnorePattern: '^_' }] },
   },
   {
-    files: ['*.config.js', '.github/**/*.js'],
+    files: ['*.config.js', '.github/**/*.js', 'pwa/plugin.js'],
     languageOptions: { globals: globals.node },
+  },
+  {
+    files: ['pwa/sw-template.js'],
+    languageOptions: { globals: { ...globals.serviceworker }, sourceType: 'script' },
+    rules: { 'no-undef': 'off' }, // __PRECACHE__ is filled in at build time
   },
 ];

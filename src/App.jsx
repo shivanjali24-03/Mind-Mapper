@@ -19,6 +19,8 @@ import Inspector from './components/Inspector.jsx';
 import { EmptyState, ShortcutsDialog, Toast } from './components/Overlays.jsx';
 // Loaded on demand: most sessions never open these, so they stay out of the first download
 const Tour = lazy(() => import('./components/Tour.jsx'));
+const Landing = lazy(() => import('./components/Landing.jsx'));
+const PricingDialog = lazy(() => import('./components/PricingDialog.jsx'));
 const Presenter = lazy(() => import('./components/Presenter.jsx'));
 const PasteDialog = lazy(() => import('./components/PasteDialog.jsx'));
 const TemplateGallery = lazy(() => import('./components/Templates.jsx').then((m) => ({ default: m.TemplateGallery })));
@@ -29,9 +31,11 @@ import { storageKey } from './env.js';
 import { canRedo, canUndo, emptyHistory, record, redo, undo } from './lib/history.js';
 import { fileName, parseFile, toFile } from './lib/mapFile.js';
 import { addOutlineUnder, countOutline, mapFromOutline, parseOutline, toOutline } from './lib/outline.js';
-import { descendants, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
+import { breadcrumb, descendants, focusHidden, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
+import FocusBar from './components/FocusBar.jsx';
 import { navigate } from './lib/navigate.js';
 import { buildSlides } from './lib/presentation.js';
+import { PLANS, PRO_ONLY, canCreateMap, canUse, isPro, parsePlan } from './lib/plans.js';
 import { rollUpProgress, taskList } from './lib/tasks.js';
 import TasksPanel from './components/TasksPanel.jsx';
 import OutlineView from './components/OutlineView.jsx';
@@ -46,6 +50,7 @@ const LAST_KEY = storageKey('last');
 const THEME_KEY = storageKey('theme');
 const SEEDED_KEY = storageKey('seeded');
 const TOUR_KEY = storageKey('tourDone');
+const VISITED_KEY = storageKey('visited');
 
 // Only persist what matters, so selection or measuring doesn't trigger saves
 const cleanGraph = (nodes, edges) => ({
@@ -91,11 +96,20 @@ export default function App() {
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [help, setHelp] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [tourPending, setTourPending] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  // First-time visitors (or #home) see the landing page before the editor
+  const [showLanding, setShowLanding] = useState(() => window.location.hash === '#home' || !safeGet(VISITED_KEY));
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [editRequest, setEditRequest] = useState(null);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [plan, setPlanState] = useState(() => parsePlan(safeGet(storageKey('plan'))));
+  const [pricing, setPricing] = useState(null); // null = closed, otherwise { reason }
   const [presenting, setPresenting] = useState(false);
+  const [focusId, setFocusId] = useState(null);
+  const focusRef = useRef(null);
+  focusRef.current = focusId;
   const [slideIndex, setSlideIndex] = useState(0);
   const [viewMode, setViewMode] = useState(() => (safeGet(storageKey('view')) === 'outline' ? 'outline' : 'map'));
   const [searchOpen, setSearchOpen] = useState(false);
@@ -137,6 +151,7 @@ export default function App() {
         clearTimeout(settleTimer.current);
         stableRef.current = graphSnapshot(map.nodes ?? [], map.edges ?? []);
         setHistory(emptyHistory());
+        setFocusId(null);
         setStatus('saved');
         setSidebarOpen(false);
         safeSet(LAST_KEY, map.id);
@@ -169,9 +184,60 @@ export default function App() {
       const target = list.find((m) => m.id === last) ?? list[0];
       if (target) await openMap(target.id);
       // Show the guided tour once, after the map has settled on screen
-      if (!safeGet(TOUR_KEY)) setTimeout(() => setTourOpen(true), 700);
+      if (!safeGet(TOUR_KEY)) setTourPending(true);
     })();
   }, [openMap, seedDemo]);
+
+  // Start the tour once the editor is on screen (not over the landing page)
+  useEffect(() => {
+    if (!tourPending || showLanding || !loaded) return;
+    const t = setTimeout(() => {
+      setTourOpen(true);
+      setTourPending(false);
+    }, 700);
+    return () => clearTimeout(t);
+  }, [tourPending, showLanding, loaded]);
+
+  // Landing page <-> editor
+  const openApp = useCallback((withTour = false) => {
+    safeSet(VISITED_KEY, '1');
+    setShowLanding(false);
+    if (window.location.hash === '#home') window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    if (withTour) {
+      setTourPending(false);
+      setTimeout(() => setTourOpen(true), 500);
+    }
+    requestAnimationFrame(() => fitView({ padding: 0.25, duration: 300 }));
+  }, [fitView]);
+  useEffect(() => {
+    const onHash = () => window.location.hash === '#home' && setShowLanding(true);
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  // "Install app": Chrome/Edge fire beforeinstallprompt when the app can be installed
+  useEffect(() => {
+    const onPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    const onInstalled = () => {
+      setInstallPrompt(null);
+      notify('Mind Mapper is installed');
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, [notify]);
+  const installApp = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice.catch(() => {});
+    setInstallPrompt(null);
+  };
 
   const loadDemo = async () => {
     const list = await seedDemo();
@@ -214,6 +280,7 @@ export default function App() {
 
   // Map CRUD
   const createMap = async (templateKey) => {
+    if (!requireMapSlot()) return;
     const tpl = TEMPLATES[templateKey] ?? TEMPLATES.blank;
     const { nodes: n, edges: e } = tpl.build();
     const map = await storage.createMap({ title: tpl.name === 'Blank map' ? 'Untitled map' : tpl.name, nodes: n, edges: e });
@@ -316,6 +383,7 @@ export default function App() {
 
   const exportAs = async (kind) => {
     if (!getNodes().length) return;
+    if ((kind === 'pdf' || kind === 'json') && !requirePro(kind)) return;
     try {
       if (kind === 'copy-outline') {
         await navigator.clipboard.writeText(toOutline(nodes, edges));
@@ -352,6 +420,7 @@ export default function App() {
 
   // Create a new map from pasted text
   const createFromText = async (text) => {
+    if (!requireMapSlot()) return;
     try {
       const map = mapFromOutline(parseOutline(text));
       setPasteOpen(false);
@@ -391,6 +460,7 @@ export default function App() {
   });
 
   const importFile = async (file) => {
+    if (!requirePro('import') || !requireMapSlot()) return;
     try {
       const map = parseFile(await file.text());
       const created = await storage.createMap(map);
@@ -424,8 +494,10 @@ export default function App() {
   const slide = slides[slideIndex];
 
   const startPresenting = () => {
+    if (!requirePro('present')) return;
     if (viewMode !== 'map') setViewMode('map');
     setSearchOpen(false);
+    setFocusId(null);
     setSlideIndex(0);
     setPresenting(true);
     // Full screen where the browser allows it; the presentation works without it too
@@ -451,6 +523,52 @@ export default function App() {
     return () => clearTimeout(t);
   }, [presenting, slide, fitView]);
 
+  // ---- Plans ----
+  const setPlan = (p) => {
+    setPlanState(p);
+    safeSet(storageKey('plan'), JSON.stringify(p));
+  };
+  // Returns true if allowed; otherwise opens the upgrade prompt with the reason
+  const requirePro = (feature) => {
+    if (canUse(plan, feature)) return true;
+    setPricing({ reason: PRO_ONLY[feature] });
+    return false;
+  };
+  const requireMapSlot = () => {
+    if (canCreateMap(plan, maps.length)) return true;
+    setPricing({ reason: `The Free plan includes ${PLANS.free.maxMaps} maps. Upgrade for unlimited maps, or delete a map you no longer need.` });
+    return false;
+  };
+  const upgrade = (billing) => {
+    setPlan({ id: 'pro', billing, since: new Date().toISOString().slice(0, 10) });
+    setPricing(null);
+    notify('Welcome to Pro! All features are unlocked (demo).');
+  };
+  const downgrade = () => {
+    setPlan({ id: 'free' });
+    setPricing(null);
+    notify('Switched to the Free plan');
+  };
+
+  // ---- Focus mode ----
+  const enterFocus = useCallback((id) => {
+    if (!id) return;
+    setFocusId(id);
+    setViewMode('map');
+  }, []);
+  const exitFocus = useCallback(() => setFocusId(null), []);
+  // If the focused idea is deleted, leave focus
+  useEffect(() => {
+    if (focusId && !nodes.some((n) => n.id === focusId)) setFocusId(null);
+  }, [nodes, focusId]);
+  // Fit the view to whatever is visible when focus changes
+  useEffect(() => {
+    if (!activeId) return;
+    const t = setTimeout(() => fitView({ padding: 0.25, duration: 400 }), 60);
+    return () => clearTimeout(t);
+  }, [focusId, activeId, fitView]);
+  const focusTrail = useMemo(() => (focusId ? breadcrumb(nodes, edges, focusId) : []), [focusId, nodes, edges]);
+
   // ---- Tasks ----
   const progress = useMemo(() => rollUpProgress(nodes, edges), [nodes, edges]);
   const openTaskCount = useMemo(() => taskList(nodes).length, [nodes]);
@@ -465,6 +583,7 @@ export default function App() {
   const selectAndShow = useCallback(
     (id) => {
       let next = latest.current.nodes;
+      if (focusHidden(next, edges, focusRef.current).has(id)) setFocusId(null);
       if (hiddenIds(next, edges).has(id)) next = layoutTree(revealNode(next, edges, id), edges);
       setNodes(next.map((n) => ({ ...n, selected: n.id === id })));
       const p = next.find((n) => n.id === id)?.position;
@@ -474,9 +593,14 @@ export default function App() {
   );
 
   // ---- Collapse & search ----
-  const hidden = useMemo(() => hiddenIds(nodes, edges), [nodes, edges]);
+  // Hidden = inside collapsed branches, or outside the focused branch
+  const hidden = useMemo(() => {
+    const h = hiddenIds(nodes, edges);
+    for (const id of focusHidden(nodes, edges, focusId)) h.add(id);
+    return h;
+  }, [nodes, edges, focusId]);
   const viewNodes = useMemo(() => (hidden.size ? nodes.map((n) => (hidden.has(n.id) ? { ...n, hidden: true } : n)) : nodes), [nodes, hidden]);
-  const viewEdges = useMemo(() => (hidden.size ? edges.map((e) => (hidden.has(e.target) ? { ...e, hidden: true } : e)) : edges), [edges, hidden]);
+  const viewEdges = useMemo(() => (hidden.size ? edges.map((e) => (hidden.has(e.target) || hidden.has(e.source) ? { ...e, hidden: true } : e)) : edges), [edges, hidden]);
 
   const toggleCollapse = useCallback(
     (id) => {
@@ -498,6 +622,7 @@ export default function App() {
       const idx = (i + matches.length) % matches.length;
       setMatchIndex(idx);
       const id = matches[idx];
+      if (focusHidden(latest.current.nodes, edges, focusRef.current).has(id)) setFocusId(null);
       let next = latest.current.nodes;
       if (hiddenIds(next, edges).has(id)) {
         next = layoutTree(revealNode(next, edges, id), edges);
@@ -547,7 +672,9 @@ export default function App() {
   const moveSelection = useCallback(
     (dir) => {
       const { nodes: ns, edges: es } = latest.current;
-      const id = navigate(ns, es, ns.find((n) => n.selected)?.id ?? null, dir, hiddenIds(ns, es));
+      const h = hiddenIds(ns, es);
+      for (const x of focusHidden(ns, es, focusRef.current)) h.add(x);
+      const id = navigate(ns, es, ns.find((n) => n.selected)?.id ?? null, dir, h);
       if (!id) return;
       setNodes((list) => list.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })));
       keepInView(ns.find((n) => n.id === id));
@@ -614,7 +741,7 @@ export default function App() {
         setSearchOpen(true);
         return;
       }
-      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen || pasteOpen || presenting) return; // inputs keep their own text undo
+      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen || pasteOpen || presenting || pricing) return; // inputs keep their own text undo
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === 'z') {
         e.preventDefault();
@@ -630,6 +757,16 @@ export default function App() {
       if (ARROWS[e.key] && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         moveSelection(ARROWS[e.key]);
+        return;
+      }
+      if (e.key === 'F' && e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        if (focusId && (!selected || selected.id === focusId)) exitFocus();
+        else if (selected) enterFocus(selected.id);
+        return;
+      }
+      if (e.key === 'Escape' && focusId) {
+        exitFocus();
         return;
       }
       if (e.key.toLowerCase() === 'x' && selected && !e.metaKey && !e.ctrlKey) {
@@ -660,7 +797,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection, toggleTask, presenting]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection, toggleTask, presenting, focusId, enterFocus, exitFocus, pricing]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -671,6 +808,14 @@ export default function App() {
   }, [help]);
 
   const childCount = useMemo(() => (selected ? childrenOf(edges, selected.id).length : 0), [selected, edges]);
+
+  if (showLanding) {
+    return (
+      <Suspense fallback={null}>
+        <Landing onStart={() => openApp(false)} onTour={() => openApp(true)} heroSrc={`${import.meta.env.BASE_URL}screenshots/hero.png`} />
+      </Suspense>
+    );
+  }
 
   return (
     <div className={`app${(selected && inspectorOpen) || (tasksOpen && activeId) ? ' has-inspector' : ''}${presenting ? ' is-presenting' : ''}`}>
@@ -688,6 +833,13 @@ export default function App() {
         onClose={() => setSidebarOpen(false)}
         onLoadDemo={loadDemo}
         onImport={importFile}
+        plan={plan}
+        onPlan={() => setPricing({})}
+        onInstall={installPrompt ? installApp : null}
+        onAbout={() => {
+          window.location.hash = 'home';
+          setShowLanding(true);
+        }}
         onPasteText={() => {
           setSidebarOpen(false);
           setPasteOpen(true);
@@ -721,6 +873,9 @@ export default function App() {
               onSearch={() => setSearchOpen(true)}
               onTasks={() => setTasksOpen((v) => !v)}
               onPresent={startPresenting}
+              pro={isPro(plan)}
+              focusing={!!focusId}
+              onFocus={() => (focusId ? exitFocus() : enterFocus(selected?.id))}
               tasksOpen={tasksOpen}
               openTaskCount={openTaskCount}
               onExport={exportAs}
@@ -773,6 +928,7 @@ export default function App() {
                   }}
                 />
               )}
+              {focusId && !presenting && viewMode === 'map' && <FocusBar trail={focusTrail} onFocus={enterFocus} onExit={exitFocus} />}
               {presenting && slides.length > 0 && (
                 <Suspense fallback={null}>
                   <Presenter
@@ -819,6 +975,7 @@ export default function App() {
 
       {help && <ShortcutsDialog onClose={() => setHelp(false)} />}
       <Suspense fallback={null}>
+      {pricing && <PricingDialog plan={plan} reason={pricing.reason} onUpgrade={upgrade} onDowngrade={downgrade} onClose={() => setPricing(null)} />}
       {pasteOpen && <PasteDialog onCreate={createFromText} onClose={() => setPasteOpen(false)} />}
       {galleryOpen && (
         <TemplateGallery

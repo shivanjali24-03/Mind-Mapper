@@ -33,6 +33,7 @@ const SHORTCUTS = [
   ['X', 'Make a task / tick it done'],
   ['F2 / Space or double-click', 'Edit text'],
   ['Delete / Backspace', 'Delete idea and its branches'],
+  ['Shift + F', 'Focus on the selected branch (Esc to exit)'],
   ['T', 'Tidy up the layout'],
   ['F', 'Fit map to screen'],
   ['⌘/Ctrl + V', 'Paste a list as branches of the selected idea'],
