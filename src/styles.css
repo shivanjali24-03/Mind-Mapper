@@ -1209,3 +1209,47 @@ kbd {
 .env-badge--staging {
   background: #0891b2;
 }
+
+/* ---------- Paste text to map ---------- */
+.dialog--paste {
+  width: min(620px, 100%);
+}
+.dialog__hint {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.paste-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  resize: vertical;
+}
+.paste-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.paste-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.paste-preview {
+  font-size: 13px;
+  color: var(--muted);
+}
+.paste-preview.is-error {
+  color: var(--danger);
+}
+.paste-actions {
+  display: flex;
+  gap: 8px;
+}

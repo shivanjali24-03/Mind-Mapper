@@ -1,8 +1,8 @@
-import { Compass, Sparkles, X } from 'lucide-react';
+import { ClipboardPaste, Compass, Sparkles, X } from 'lucide-react';
 import Logo from './Logo.jsx';
 import { TemplateGrid } from './Templates.jsx';
 
-export function EmptyState({ onCreate, onLoadDemo, onTour }) {
+export function EmptyState({ onCreate, onLoadDemo, onTour, onPasteText }) {
   return (
     <div className="empty">
       <div className="empty__icon" aria-hidden="true">
@@ -12,6 +12,9 @@ export function EmptyState({ onCreate, onLoadDemo, onTour }) {
       <p>Start from a blank canvas or pick a template. Your work saves automatically.</p>
       <TemplateGrid onPick={onCreate} />
       <div className="empty__actions">
+        <button className="btn btn--ghost" onClick={onPasteText}>
+          <ClipboardPaste size={15} /> Paste text to map
+        </button>
         <button className="btn btn--ghost" onClick={onLoadDemo}>
           <Sparkles size={15} /> Load demo maps
         </button>
@@ -30,6 +33,7 @@ const SHORTCUTS = [
   ['Delete / Backspace', 'Delete idea and its branches'],
   ['T', 'Tidy up the layout'],
   ['F', 'Fit map to screen'],
+  ['⌘/Ctrl + V', 'Paste a list as branches of the selected idea'],
   ['⌘/Ctrl + K', 'Search ideas and notes'],
   ['⌘/Ctrl + Z', 'Undo'],
   ['⌘/Ctrl + Shift + Z', 'Redo'],
