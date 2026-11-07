@@ -1,5 +1,9 @@
 // Realistic demo maps so a first-time visitor sees a working app straight away.
 import { layoutTree, makeEdge, makeNode, newId } from './mapOps.js';
+import { todayISO } from './tasks.js';
+
+// Due dates relative to today, so the demo always shows overdue / today / upcoming tasks
+const inDays = (n) => todayISO(new Date(Date.now() + n * 86400000));
 
 /**
  * Build a map from a simple outline:
@@ -16,6 +20,7 @@ export function fromOutline(title, outline) {
     const color = item.color ?? (depth === 1 ? palette[index % palette.length] : inheritedColor);
     const node = makeNode({ id, label: item.label, color, root: depth === 0 });
     node.data.notes = item.notes ?? '';
+    if (item.task) node.data.task = item.task;
     nodes.push(node);
     if (parentId) edges.push(makeEdge(parentId, id));
     (item.children ?? []).forEach((child, i) => walk(child, id, depth + 1, color, i));
@@ -68,10 +73,26 @@ export const DEMO_OUTLINES = [
         { label: 'Goals', children: [{ label: 'Invoices screen live' }, { label: 'Fix top 5 bugs' }] },
         {
           label: 'Frontend',
-          children: [{ label: 'Invoice table' }, { label: 'PDF preview' }, { label: 'Empty & error states' }],
+          children: [
+            { label: 'Invoice table', task: { done: true } },
+            { label: 'PDF preview', task: { done: false, due: inDays(2), priority: 'high' } },
+            { label: 'Empty & error states', task: { done: false, due: inDays(5), priority: 'low' } },
+          ],
         },
-        { label: 'Backend', children: [{ label: 'Invoices API' }, { label: 'Tax rules', notes: 'GST and VAT strategies.' }] },
-        { label: 'QA', children: [{ label: 'Test plan' }, { label: 'Regression run' }] },
+        {
+          label: 'Backend',
+          children: [
+            { label: 'Invoices API', task: { done: true } },
+            { label: 'Tax rules', notes: 'GST and VAT strategies.', task: { done: false, due: inDays(0), priority: 'medium' } },
+          ],
+        },
+        {
+          label: 'QA',
+          children: [
+            { label: 'Test plan', task: { done: false, due: inDays(-1), priority: 'high' } },
+            { label: 'Regression run', task: { done: false, due: inDays(9) } },
+          ],
+        },
         { label: 'Risks', color: 'slate', children: [{ label: 'Payment gateway delay' }] },
       ],
     },

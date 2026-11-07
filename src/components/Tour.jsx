@@ -21,7 +21,7 @@ export const TOUR_STEPS = [
   {
     target: 'root-node',
     title: 'Edit an idea',
-    body: '**Click** an idea to select it. **Double-click** to change its text.',
+    body: '**Click** an idea to select it, or move with the **arrow keys**. **Double-click** or press **F2** to change its text.',
   },
   {
     target: 'add-child',

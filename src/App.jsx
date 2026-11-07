@@ -19,6 +19,8 @@ import Inspector from './components/Inspector.jsx';
 import { EmptyState, ShortcutsDialog, Toast } from './components/Overlays.jsx';
 // Loaded on demand: most sessions never open these, so they stay out of the first download
 const Tour = lazy(() => import('./components/Tour.jsx'));
+const Presenter = lazy(() => import('./components/Presenter.jsx'));
+const PasteDialog = lazy(() => import('./components/PasteDialog.jsx'));
 const TemplateGallery = lazy(() => import('./components/Templates.jsx').then((m) => ({ default: m.TemplateGallery })));
 import { buildDemoMaps } from './lib/demoData.js';
 import { TEMPLATES, addChild, addSibling, childrenOf, layoutTree, removeWithDescendants } from './lib/mapOps.js';
@@ -26,7 +28,13 @@ import * as storage from './api/storage.js';
 import { storageKey } from './env.js';
 import { canRedo, canUndo, emptyHistory, record, redo, undo } from './lib/history.js';
 import { fileName, parseFile, toFile } from './lib/mapFile.js';
+import { addOutlineUnder, countOutline, mapFromOutline, parseOutline, toOutline } from './lib/outline.js';
 import { descendants, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
+import { navigate } from './lib/navigate.js';
+import { buildSlides } from './lib/presentation.js';
+import { rollUpProgress, taskList } from './lib/tasks.js';
+import TasksPanel from './components/TasksPanel.jsx';
+import OutlineView from './components/OutlineView.jsx';
 import { ViewContext } from './components/viewContext.js';
 import SearchBar from './components/SearchBar.jsx';
 
@@ -64,10 +72,12 @@ const safeSet = (k, v) => {
   }
 };
 
+const ARROWS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+
 const isTyping = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
 
 export default function App() {
-  const { fitView, getNodes, setCenter, getZoom } = useReactFlow();
+  const { fitView, getNodes, setCenter, getZoom, getViewport } = useReactFlow();
   const [mode, setMode] = useState('local');
   const [maps, setMaps] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -82,6 +92,12 @@ export default function App() {
   const [help, setHelp] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [editRequest, setEditRequest] = useState(null);
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [presenting, setPresenting] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [viewMode, setViewMode] = useState(() => (safeGet(storageKey('view')) === 'outline' ? 'outline' : 'map'));
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [matchIndex, setMatchIndex] = useState(0);
@@ -301,6 +317,16 @@ export default function App() {
   const exportAs = async (kind) => {
     if (!getNodes().length) return;
     try {
+      if (kind === 'copy-outline') {
+        await navigator.clipboard.writeText(toOutline(nodes, edges));
+        return notify('Outline copied. Paste it into any doc or chat');
+      }
+      if (kind === 'md') {
+        const href = URL.createObjectURL(new Blob([toOutline(nodes, edges)], { type: 'text/markdown' }));
+        download(href, fileName(title, 'md'));
+        setTimeout(() => URL.revokeObjectURL(href), 1000);
+        return notify('Markdown exported');
+      }
       if (kind === 'json') {
         const blob = new Blob([toFile({ title, nodes, edges })], { type: 'application/json' });
         const href = URL.createObjectURL(blob);
@@ -324,6 +350,46 @@ export default function App() {
     }
   };
 
+  // Create a new map from pasted text
+  const createFromText = async (text) => {
+    try {
+      const map = mapFromOutline(parseOutline(text));
+      setPasteOpen(false);
+      const created = await storage.createMap(map);
+      setMaps((list) => [{ id: created.id, title: created.title, updatedAt: created.updatedAt }, ...list]);
+      await openMap(created.id);
+      notify(`Created "${created.title}" with ${map.nodes.length} ideas`);
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+
+  // Paste text onto the canvas: it becomes branches under the selected idea (or the central idea)
+  useEffect(() => {
+    const onPaste = (e) => {
+      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen || pasteOpen) return;
+      const text = e.clipboardData?.getData('text/plain');
+      if (!text?.trim()) return;
+      e.preventDefault();
+      if (!activeId) return createFromText(text);
+      let forest;
+      try {
+        forest = parseOutline(text);
+      } catch (err) {
+        return notify(err.message);
+      }
+      const current = latest.current;
+      const target = current.nodes.find((n) => n.selected) ?? current.nodes.find((n) => n.data.root);
+      if (!target) return;
+      const r = addOutlineUnder(current.nodes, current.edges, target.id, forest);
+      setNodes(r.nodes.map((n) => ({ ...n, selected: n.id === r.added[0] })));
+      setEdges(r.edges);
+      notify(`Added ${countOutline(forest)} ${countOutline(forest) === 1 ? 'idea' : 'ideas'} under "${target.data.label}"`);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  });
+
   const importFile = async (file) => {
     try {
       const map = parseFile(await file.text());
@@ -335,6 +401,77 @@ export default function App() {
       notify(err.message || 'Import failed');
     }
   };
+
+  // ---- Map / Outline view ----
+  const changeView = (mode) => {
+    setViewMode(mode);
+    safeSet(storageKey('view'), mode);
+    if (mode === 'map') requestAnimationFrame(() => fitView({ padding: 0.25, duration: 250 }));
+  };
+  const setGraph = useCallback((ns, es) => {
+    setNodes(ns);
+    setEdges(es);
+  }, []);
+  const setLabel = useCallback((id, label) => {
+    setNodes((ns) => ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, label } } : n)));
+  }, []);
+  const selectOnlyId = useCallback((id) => {
+    setNodes((ns) => ns.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })));
+  }, []);
+
+  // ---- Presentation ----
+  const slides = useMemo(() => (presenting ? buildSlides(nodes, edges, hiddenIds(nodes, edges)) : []), [presenting, nodes, edges]);
+  const slide = slides[slideIndex];
+
+  const startPresenting = () => {
+    if (viewMode !== 'map') setViewMode('map');
+    setSearchOpen(false);
+    setSlideIndex(0);
+    setPresenting(true);
+    // Full screen where the browser allows it; the presentation works without it too
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+  const stopPresenting = useCallback(() => {
+    setPresenting(false);
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    requestAnimationFrame(() => fitView({ padding: 0.25, duration: 300 }));
+  }, [fitView]);
+
+  // Leaving full screen with the browser's own Esc also ends the presentation
+  useEffect(() => {
+    const onFs = () => !document.fullscreenElement && presenting && stopPresenting();
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, [presenting, stopPresenting]);
+
+  // Zoom to the ideas on the current slide
+  useEffect(() => {
+    if (!presenting || !slide) return;
+    const t = setTimeout(() => fitView({ nodes: slide.ids.map((id) => ({ id })), padding: 0.3, duration: 650, maxZoom: 1.4 }), 80);
+    return () => clearTimeout(t);
+  }, [presenting, slide, fitView]);
+
+  // ---- Tasks ----
+  const progress = useMemo(() => rollUpProgress(nodes, edges), [nodes, edges]);
+  const openTaskCount = useMemo(() => taskList(nodes).length, [nodes]);
+
+  // Tick or untick a task; an idea that isn't a task yet becomes one
+  const toggleTask = useCallback((id) => {
+    setNodes((ns) =>
+      ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, task: n.data.task ? { ...n.data.task, done: !n.data.task.done } : { done: false } } } : n)),
+    );
+  }, []);
+
+  const selectAndShow = useCallback(
+    (id) => {
+      let next = latest.current.nodes;
+      if (hiddenIds(next, edges).has(id)) next = layoutTree(revealNode(next, edges, id), edges);
+      setNodes(next.map((n) => ({ ...n, selected: n.id === id })));
+      const p = next.find((n) => n.id === id)?.position;
+      if (p) setCenter(p.x + 90, p.y + 21, { zoom: Math.max(getZoom(), 0.8), duration: 250 });
+    },
+    [edges, setCenter, getZoom],
+  );
 
   // ---- Collapse & search ----
   const hidden = useMemo(() => hiddenIds(nodes, edges), [nodes, edges]);
@@ -387,8 +524,36 @@ export default function App() {
     for (const e of edges) childCounts[e.source] = (childCounts[e.source] ?? 0) + 1;
     const hiddenCounts = {};
     for (const n of nodes) if (n.data.collapsed) hiddenCounts[n.id] = descendants(edges, n.id).size;
-    return { childCounts, hiddenCounts, matches: new Set(searchOpen ? matches : []), currentMatch: searchOpen ? currentMatch : null, toggleCollapse };
-  }, [nodes, edges, matches, currentMatch, searchOpen, toggleCollapse]);
+    return { childCounts, hiddenCounts, matches: new Set(searchOpen ? matches : []), currentMatch: searchOpen ? currentMatch : null, toggleCollapse, editRequest, progress, toggleTask, spotlight: presenting && slide ? new Set(slide.ids) : null, spotFocus: presenting ? slide?.focus : null };
+  }, [nodes, edges, matches, currentMatch, searchOpen, toggleCollapse, editRequest, progress, toggleTask, presenting, slide]);
+
+  // ---- Keyboard navigation ----
+  // Pan only if the newly selected idea is outside the visible canvas
+  const keepInView = useCallback(
+    (node) => {
+      const canvas = document.querySelector('.canvas')?.getBoundingClientRect();
+      if (!canvas || !node) return;
+      const { x, y, zoom } = getViewport();
+      const sx = node.position.x * zoom + x;
+      const sy = node.position.y * zoom + y;
+      const m = 60;
+      if (sx < m || sy < m || sx + 200 * zoom > canvas.width - m || sy + 44 * zoom > canvas.height - m) {
+        setCenter(node.position.x + 90, node.position.y + 21, { zoom, duration: 200 });
+      }
+    },
+    [getViewport, setCenter],
+  );
+
+  const moveSelection = useCallback(
+    (dir) => {
+      const { nodes: ns, edges: es } = latest.current;
+      const id = navigate(ns, es, ns.find((n) => n.selected)?.id ?? null, dir, hiddenIds(ns, es));
+      if (!id) return;
+      setNodes((list) => list.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })));
+      keepInView(ns.find((n) => n.id === id));
+    },
+    [keepInView],
+  );
 
   // ---- Undo / redo ----
   latest.current = { nodes, edges };
@@ -449,7 +614,7 @@ export default function App() {
         setSearchOpen(true);
         return;
       }
-      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen) return; // inputs keep their own text undo
+      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen || pasteOpen || presenting) return; // inputs keep their own text undo
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === 'z') {
         e.preventDefault();
@@ -460,6 +625,21 @@ export default function App() {
       if (mod && e.key.toLowerCase() === 'y') {
         e.preventDefault();
         doRedo();
+        return;
+      }
+      if (ARROWS[e.key] && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        moveSelection(ARROWS[e.key]);
+        return;
+      }
+      if (e.key.toLowerCase() === 'x' && selected && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        toggleTask(selected.id);
+        return;
+      }
+      if ((e.key === 'F2' || e.key === ' ') && selected) {
+        e.preventDefault();
+        setEditRequest({ id: selected.id, at: Date.now() });
         return;
       }
       if (e.key === 'Tab' && selected) {
@@ -480,7 +660,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, doUndo, doRedo, activeId]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection, toggleTask, presenting]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -493,7 +673,7 @@ export default function App() {
   const childCount = useMemo(() => (selected ? childrenOf(edges, selected.id).length : 0), [selected, edges]);
 
   return (
-    <div className={`app${selected && inspectorOpen ? ' has-inspector' : ''}`}>
+    <div className={`app${(selected && inspectorOpen) || (tasksOpen && activeId) ? ' has-inspector' : ''}${presenting ? ' is-presenting' : ''}`}>
       <Sidebar
         maps={maps}
         activeId={activeId}
@@ -508,6 +688,10 @@ export default function App() {
         onClose={() => setSidebarOpen(false)}
         onLoadDemo={loadDemo}
         onImport={importFile}
+        onPasteText={() => {
+          setSidebarOpen(false);
+          setPasteOpen(true);
+        }}
         onTour={() => {
           setSidebarOpen(false);
           setTourOpen(true);
@@ -535,16 +719,25 @@ export default function App() {
               onUndo={doUndo}
               onRedo={doRedo}
               onSearch={() => setSearchOpen(true)}
+              onTasks={() => setTasksOpen((v) => !v)}
+              onPresent={startPresenting}
+              tasksOpen={tasksOpen}
+              openTaskCount={openTaskCount}
               onExport={exportAs}
               onTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               onHelp={() => setHelp(true)}
               onTour={() => setTourOpen(true)}
+              viewMode={viewMode}
+              onViewMode={changeView}
             />
             <div className="canvas" data-tour="canvas">
               <ViewContext.Provider value={viewInfo}>
+              {viewMode === 'outline' ? (
+                <OutlineView nodes={nodes} edges={edges} onGraph={setGraph} onLabel={setLabel} onSelect={selectOnlyId} onUndo={doUndo} onRedo={doRedo} />
+              ) : (
               <ReactFlow
                 nodes={viewNodes}
-                edges={viewEdges}
+                edges={presenting && slide ? viewEdges.map((e) => (slide.ids.includes(e.source) && slide.ids.includes(e.target) ? e : { ...e, className: 'is-dim' })) : viewEdges}
                 nodeTypes={nodeTypes}
                 defaultEdgeOptions={defaultEdgeOptions}
                 onNodesChange={onNodesChange}
@@ -552,6 +745,8 @@ export default function App() {
                 onConnect={onConnect}
                 onNodeClick={() => setInspectorOpen(true)}
                 deleteKeyCode={null}
+                disableKeyboardA11y
+                panActivationKeyCode={null}
                 colorMode={theme}
                 fitView
                 minZoom={0.2}
@@ -562,6 +757,7 @@ export default function App() {
                 <Controls showInteractive={false} position="bottom-left" />
                 <MiniMap pannable zoomable position="bottom-right" nodeBorderRadius={10} nodeColor={minimapColor} className="minimap" />
               </ReactFlow>
+              )}
               </ViewContext.Provider>
               {searchOpen && (
                 <SearchBar
@@ -577,9 +773,22 @@ export default function App() {
                   }}
                 />
               )}
+              {presenting && slides.length > 0 && (
+                <Suspense fallback={null}>
+                  <Presenter
+                    slides={slides}
+                    index={Math.min(slideIndex, slides.length - 1)}
+                    notes={nodes.find((n) => n.id === slide?.focus)?.data.notes}
+                    onIndex={setSlideIndex}
+                    onExit={stopPresenting}
+                  />
+                </Suspense>
+              )}
+              {viewMode === 'map' && !presenting && (
               <p className="hint">
                 Double-click to edit · <kbd>Tab</kbd> child · <kbd>Enter</kbd> sibling · <kbd>?</kbd> shortcuts
               </p>
+              )}
             </div>
           </>
         ) : (
@@ -588,13 +797,16 @@ export default function App() {
               <button className="icon-btn floating-menu" onClick={() => setSidebarOpen(true)} aria-label="Open maps">
                 ☰
               </button>
-              <EmptyState onCreate={createMap} onLoadDemo={loadDemo} onTour={() => setTourOpen(true)} />
+              <EmptyState onCreate={createMap} onLoadDemo={loadDemo} onTour={() => setTourOpen(true)} onPasteText={() => setPasteOpen(true)} />
             </>
           )
         )}
       </main>
 
-      {selected && inspectorOpen && (
+      {tasksOpen && activeId && (
+        <TasksPanel nodes={nodes} onToggle={toggleTask} onSelect={selectAndShow} onClose={() => setTasksOpen(false)} />
+      )}
+      {!tasksOpen && selected && inspectorOpen && (
         <Inspector
           node={selected}
           childCount={childCount}
@@ -607,6 +819,7 @@ export default function App() {
 
       {help && <ShortcutsDialog onClose={() => setHelp(false)} />}
       <Suspense fallback={null}>
+      {pasteOpen && <PasteDialog onCreate={createFromText} onClose={() => setPasteOpen(false)} />}
       {galleryOpen && (
         <TemplateGallery
           onPick={(key) => {
