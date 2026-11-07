@@ -1193,3 +1193,19 @@ kbd {
     padding: 0;
   }
 }
+
+/* Environment badge (dev / staging builds only) */
+.env-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 3px 7px;
+  border-radius: 6px;
+  color: #fff;
+}
+.env-badge--dev {
+  background: #f59e0b;
+}
+.env-badge--staging {
+  background: #0891b2;
+}
