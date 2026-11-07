@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -12,14 +12,14 @@ import {
   getViewportForBounds,
   useReactFlow,
 } from '@xyflow/react';
-import { toPng } from 'html-to-image';
 import MindNode from './components/MindNode.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import Toolbar from './components/Toolbar.jsx';
 import Inspector from './components/Inspector.jsx';
 import { EmptyState, ShortcutsDialog, Toast } from './components/Overlays.jsx';
-import Tour from './components/Tour.jsx';
-import { TemplateGallery } from './components/Templates.jsx';
+// Loaded on demand: most sessions never open these, so they stay out of the first download
+const Tour = lazy(() => import('./components/Tour.jsx'));
+const TemplateGallery = lazy(() => import('./components/Templates.jsx').then((m) => ({ default: m.TemplateGallery })));
 import { buildDemoMaps } from './lib/demoData.js';
 import { TEMPLATES, addChild, addSibling, childrenOf, layoutTree, removeWithDescendants } from './lib/mapOps.js';
 import * as storage from './api/storage.js';
@@ -263,6 +263,7 @@ export default function App() {
     const vp = getViewportForBounds(bounds, width, height, 0.2, 2, 0.12);
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim();
     try {
+      const { toPng } = await import('html-to-image'); // only needed when exporting
       const url = await toPng(document.querySelector('.react-flow__viewport'), {
         backgroundColor: bg,
         width,
@@ -410,6 +411,7 @@ export default function App() {
       )}
 
       {help && <ShortcutsDialog onClose={() => setHelp(false)} />}
+      <Suspense fallback={null}>
       {galleryOpen && (
         <TemplateGallery
           onPick={(key) => {
@@ -419,7 +421,8 @@ export default function App() {
           onClose={() => setGalleryOpen(false)}
         />
       )}
-      <Tour open={tourOpen} onClose={closeTour} />
+      {tourOpen && <Tour open={tourOpen} onClose={closeTour} />}
+      </Suspense>
       <Toast message={toast} />
     </div>
   );
