@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging, develop]
   pull_request:
 
 jobs:
@@ -17,6 +17,8 @@ jobs:
           cache: npm
       - name: Install app dependencies
         run: npm ci
+      - name: Lint
+        run: npm run lint
       - name: Unit tests
         run: npm test
       - name: Production build

@@ -1,8 +1,14 @@
-name: Deploy demo
+name: Deploy environments
+
+# One GitHub Pages site serves all three environments:
+#   main    -> /Mind-Mapper/          (production)
+#   staging -> /Mind-Mapper/staging/  (QA / release candidate)
+#   develop -> /Mind-Mapper/dev/      (latest integrated work)
+# A push to any of these branches rebuilds the whole site from all three branches.
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging, develop]
   workflow_dispatch:
 
 permissions:
@@ -12,25 +18,40 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
-      # The demo runs in local mode (no server), so it's served as a static site
-      - run: npm run build
-        env:
-          BASE_PATH: /Mind-Mapper/
+      - name: Build production, staging and dev
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          build() {
+            local branch="$1" path="$2" env="$3"
+            if ! git rev-parse -q --verify "origin/$branch" >/dev/null; then
+              echo "Skipping $branch (branch not found)"; return
+            fi
+            git worktree add "../wt-$branch" "origin/$branch"
+            (cd "../wt-$branch" && npm ci --no-audit --no-fund && BASE_PATH="/Mind-Mapper/$path" VITE_APP_ENV="$env" npm run build)
+            mkdir -p "site/$path"
+            cp -R "../wt-$branch/dist/." "site/$path"
+            echo "Built $branch -> /Mind-Mapper/$path ($env)"
+          }
+          build main "" production
+          build staging "staging/" staging
+          build develop "dev/" development
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: site
 
   deploy:
     needs: build
