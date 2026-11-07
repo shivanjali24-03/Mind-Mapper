@@ -23,6 +23,7 @@ const TemplateGallery = lazy(() => import('./components/Templates.jsx').then((m)
 import { buildDemoMaps } from './lib/demoData.js';
 import { TEMPLATES, addChild, addSibling, childrenOf, layoutTree, removeWithDescendants } from './lib/mapOps.js';
 import * as storage from './api/storage.js';
+import { storageKey } from './env.js';
 import { canRedo, canUndo, emptyHistory, record, redo, undo } from './lib/history.js';
 import { fileName, parseFile, toFile } from './lib/mapFile.js';
 import { descendants, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
@@ -33,10 +34,10 @@ const nodeTypes = { mind: MindNode };
 const MINIMAP_COLORS = { violet: '#8b5cf6', cyan: '#06b6d4', pink: '#ec4899', amber: '#f59e0b', emerald: '#10b981', slate: '#64748b' };
 const minimapColor = (n) => MINIMAP_COLORS[n.data?.color] ?? '#8b5cf6';
 const defaultEdgeOptions = { type: 'smoothstep', className: 'mind-edge' };
-const LAST_KEY = 'mindmapper.last';
-const THEME_KEY = 'mindmapper.theme';
-const SEEDED_KEY = 'mindmapper.seeded';
-const TOUR_KEY = 'mindmapper.tourDone';
+const LAST_KEY = storageKey('last');
+const THEME_KEY = storageKey('theme');
+const SEEDED_KEY = storageKey('seeded');
+const TOUR_KEY = storageKey('tourDone');
 
 // Only persist what matters, so selection or measuring doesn't trigger saves
 const cleanGraph = (nodes, edges) => ({
