@@ -38,7 +38,7 @@ connectDB();
 app.use('/api/mindmaps', mindMapRoutes);
 
 // Validation errors become 400s; anything else is a 500 without leaking details
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => { // Express needs 4 arguments to treat this as an error handler
     if (err.name === 'ValidationError') return res.status(400).json({ error: err.message });
     console.error(err);
     res.status(500).json({ error: 'Something went wrong' });
