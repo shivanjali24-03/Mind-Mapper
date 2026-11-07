@@ -4,7 +4,9 @@
 //             so the live demo always works)
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
-const LS_KEY = 'mindmapper.maps.v1';
+import { storageKey } from '../env.js';
+
+const LS_KEY = storageKey('maps.v1');
 
 let mode = null;
 
