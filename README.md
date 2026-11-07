@@ -12,6 +12,9 @@
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Tested_with-Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)
 
+[![CI](https://github.com/shivanjali24-03/Mind-Mapper/actions/workflows/ci.yml/badge.svg)](https://github.com/shivanjali24-03/Mind-Mapper/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/Live_demo-Open_app-7c3aed?style=flat&logo=githubpages&logoColor=white)](https://shivanjali24-03.github.io/Mind-Mapper/)
+
 <img src="docs/screenshots/editor-dark.png" alt="Mind Mapper editor in dark mode" width="100%"/>
 
 </div>
