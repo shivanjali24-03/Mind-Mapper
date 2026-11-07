@@ -97,6 +97,7 @@ export default function App() {
   const [help, setHelp] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
   const [tourPending, setTourPending] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
   // First-time visitors (or #home) see the landing page before the editor
   const [showLanding, setShowLanding] = useState(() => window.location.hash === '#home' || !safeGet(VISITED_KEY));
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -213,6 +214,30 @@ export default function App() {
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
+
+  // "Install app": Chrome/Edge fire beforeinstallprompt when the app can be installed
+  useEffect(() => {
+    const onPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    const onInstalled = () => {
+      setInstallPrompt(null);
+      notify('Mind Mapper is installed');
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, [notify]);
+  const installApp = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice.catch(() => {});
+    setInstallPrompt(null);
+  };
 
   const loadDemo = async () => {
     const list = await seedDemo();
@@ -810,6 +835,7 @@ export default function App() {
         onImport={importFile}
         plan={plan}
         onPlan={() => setPricing({})}
+        onInstall={installPrompt ? installApp : null}
         onAbout={() => {
           window.location.hash = 'home';
           setShowLanding(true);
