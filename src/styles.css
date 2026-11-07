@@ -1070,3 +1070,20 @@ kbd {
 .empty {
   max-width: 920px;
 }
+
+/* Export menu */
+.export {
+  position: relative;
+  display: inline-flex;
+}
+.export__menu {
+  left: auto;
+  right: 0;
+  width: 200px;
+  top: calc(100% + 6px);
+}
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
