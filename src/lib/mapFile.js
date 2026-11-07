@@ -1,6 +1,7 @@
 // The .json file format for exporting and importing maps, with strict validation:
 // imported files come from users, so nothing is trusted as-is.
 import { COLORS } from './mapOps.js';
+import { cleanTask } from './tasks.js';
 
 export const FILE_FORMAT = 'mind-mapper';
 export const FILE_VERSION = 1;
@@ -58,6 +59,7 @@ export function parseFile(raw) {
         notes: text(d.notes, 2000),
         root: d.root === true,
         ...(d.collapsed === true ? { collapsed: true } : {}),
+        ...(cleanTask(d.task) ? { task: cleanTask(d.task) } : {}),
       },
     };
   });

@@ -63,6 +63,22 @@ describe('toFile / parseFile', () => {
   });
 });
 
+describe('tasks in files', () => {
+  it('keeps valid task data and cleans the rest', () => {
+    const raw = fileWith({
+      nodes: [
+        { id: 'r', data: { label: 'R', root: true } },
+        { id: 't', data: { label: 'T', task: { done: true, due: '2026-12-01', priority: 'high', x: 1 } } },
+        { id: 'b', data: { label: 'B', task: { due: 'soon' } } },
+      ],
+      edges: [{ source: 'r', target: 't' }, { source: 'r', target: 'b' }],
+    });
+    const [, t, b] = parseFile(raw).nodes;
+    expect(t.data.task).toEqual({ done: true, due: '2026-12-01', priority: 'high' });
+    expect(b.data.task).toEqual({ done: false });
+  });
+});
+
 describe('fileName', () => {
   it('turns a title into a safe file name', () => {
     expect(fileName('Sprint 14: Plan!', 'pdf')).toBe('sprint-14-plan.pdf');
