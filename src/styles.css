@@ -1572,3 +1572,101 @@ kbd {
     padding: 0 8px;
   }
 }
+
+/* ---------- Presentation mode ---------- */
+.app.is-presenting {
+  grid-template-columns: 1fr !important;
+}
+.app.is-presenting .sidebar,
+.app.is-presenting .toolbar,
+.app.is-presenting .inspector,
+.app.is-presenting .react-flow__controls,
+.app.is-presenting .minimap,
+.app.is-presenting .collapse-btn {
+  display: none !important;
+}
+.app.is-presenting .main {
+  grid-column: 1 / -1;
+}
+.app.is-presenting .react-flow__node {
+  pointer-events: none;
+}
+.mind-node.is-dim,
+.react-flow__edge.is-dim {
+  opacity: 0.12;
+  transition: opacity 0.5s ease;
+}
+.mind-node {
+  transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s, opacity 0.5s ease;
+}
+.mind-node.is-spot {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--node) 45%, transparent), 0 14px 40px color-mix(in srgb, var(--node) 45%, transparent);
+}
+.presenter {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(720px, calc(100% - 32px));
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  z-index: 30;
+  animation: pop 0.2s ease-out;
+}
+.presenter__info {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+.presenter__title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.presenter__notes {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.presenter__dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.presenter__dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 99px;
+  background: var(--border);
+  transition: width 0.2s, background 0.2s;
+}
+.presenter__dots button.is-on {
+  width: 20px;
+  background: var(--accent);
+}
+.presenter__count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.presenter__btn {
+  width: 40px;
+  height: 40px;
+}
+.app.is-presenting .mind-handle {
+  display: none !important;
+}
