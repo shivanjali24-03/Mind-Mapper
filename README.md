@@ -31,6 +31,7 @@
 | 📋 **Paste to map** | Paste notes, bullet lists or Markdown from anywhere and get an instant map. Paste onto a selected idea to add branches; copy any map back as an outline or download it as Markdown. Checkboxes become tasks |
 | ✅ **Tasks & progress** | Turn any idea into a task (press `X`) with a due date and priority. Branches show a progress ring, due dates are colour-coded (overdue, today, soon), and the **Tasks** panel lists everything open by due date. Brainstorm to project plan in one place |
 | 🗒️ **Outline view** | Switch between **Map** and **Outline** (an editable bullet list of the same map). `Enter` new line, `Tab` / `Shift+Tab` indent and outdent, `Alt+↑↓` reorder, `⌫` on an empty line deletes it. Changes show on the map instantly |
+| 🎤 **Presentation mode** | Click **Present** to show the map full screen: an overview, then one slide per branch. It zooms smoothly to each branch, dims the rest, and shows the idea's notes as speaker notes. `→`/`Space` next, `←` back, `Esc` exit |
 | 📝 **Inspector panel** | Edit text, pick from 6 colours and add notes to any idea |
 | 💾 **Autosave** | Changes save automatically, with a live "Saving… / Saved" status |
 | 🗂️ **Many maps** | Sidebar with search, quick switching and safe two-step delete |
