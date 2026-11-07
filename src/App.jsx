@@ -19,6 +19,7 @@ import Inspector from './components/Inspector.jsx';
 import { EmptyState, ShortcutsDialog, Toast } from './components/Overlays.jsx';
 // Loaded on demand: most sessions never open these, so they stay out of the first download
 const Tour = lazy(() => import('./components/Tour.jsx'));
+const Landing = lazy(() => import('./components/Landing.jsx'));
 const PricingDialog = lazy(() => import('./components/PricingDialog.jsx'));
 const Presenter = lazy(() => import('./components/Presenter.jsx'));
 const PasteDialog = lazy(() => import('./components/PasteDialog.jsx'));
@@ -49,6 +50,7 @@ const LAST_KEY = storageKey('last');
 const THEME_KEY = storageKey('theme');
 const SEEDED_KEY = storageKey('seeded');
 const TOUR_KEY = storageKey('tourDone');
+const VISITED_KEY = storageKey('visited');
 
 // Only persist what matters, so selection or measuring doesn't trigger saves
 const cleanGraph = (nodes, edges) => ({
@@ -94,6 +96,9 @@ export default function App() {
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [help, setHelp] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [tourPending, setTourPending] = useState(false);
+  // First-time visitors (or #home) see the landing page before the editor
+  const [showLanding, setShowLanding] = useState(() => window.location.hash === '#home' || !safeGet(VISITED_KEY));
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [editRequest, setEditRequest] = useState(null);
@@ -178,9 +183,36 @@ export default function App() {
       const target = list.find((m) => m.id === last) ?? list[0];
       if (target) await openMap(target.id);
       // Show the guided tour once, after the map has settled on screen
-      if (!safeGet(TOUR_KEY)) setTimeout(() => setTourOpen(true), 700);
+      if (!safeGet(TOUR_KEY)) setTourPending(true);
     })();
   }, [openMap, seedDemo]);
+
+  // Start the tour once the editor is on screen (not over the landing page)
+  useEffect(() => {
+    if (!tourPending || showLanding || !loaded) return;
+    const t = setTimeout(() => {
+      setTourOpen(true);
+      setTourPending(false);
+    }, 700);
+    return () => clearTimeout(t);
+  }, [tourPending, showLanding, loaded]);
+
+  // Landing page <-> editor
+  const openApp = useCallback((withTour = false) => {
+    safeSet(VISITED_KEY, '1');
+    setShowLanding(false);
+    if (window.location.hash === '#home') window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    if (withTour) {
+      setTourPending(false);
+      setTimeout(() => setTourOpen(true), 500);
+    }
+    requestAnimationFrame(() => fitView({ padding: 0.25, duration: 300 }));
+  }, [fitView]);
+  useEffect(() => {
+    const onHash = () => window.location.hash === '#home' && setShowLanding(true);
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   const loadDemo = async () => {
     const list = await seedDemo();
@@ -752,6 +784,14 @@ export default function App() {
 
   const childCount = useMemo(() => (selected ? childrenOf(edges, selected.id).length : 0), [selected, edges]);
 
+  if (showLanding) {
+    return (
+      <Suspense fallback={null}>
+        <Landing onStart={() => openApp(false)} onTour={() => openApp(true)} heroSrc={`${import.meta.env.BASE_URL}screenshots/hero.png`} />
+      </Suspense>
+    );
+  }
+
   return (
     <div className={`app${(selected && inspectorOpen) || (tasksOpen && activeId) ? ' has-inspector' : ''}${presenting ? ' is-presenting' : ''}`}>
       <Sidebar
@@ -770,6 +810,10 @@ export default function App() {
         onImport={importFile}
         plan={plan}
         onPlan={() => setPricing({})}
+        onAbout={() => {
+          window.location.hash = 'home';
+          setShowLanding(true);
+        }}
         onPasteText={() => {
           setSidebarOpen(false);
           setPasteOpen(true);
