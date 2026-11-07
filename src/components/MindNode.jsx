@@ -7,7 +7,7 @@ import { useView } from './viewContext.js';
 
 function MindNode({ id, data, selected }) {
   const { updateNodeData } = useReactFlow();
-  const { childCounts, hiddenCounts, matches, currentMatch, toggleCollapse, editRequest, progress, toggleTask } = useView();
+  const { childCounts, hiddenCounts, matches, currentMatch, toggleCollapse, editRequest, progress, toggleTask, spotlight, spotFocus } = useView();
   const task = data.task;
   const prog = progress[id];
   const kids = childCounts[id] ?? 0;
@@ -32,7 +32,7 @@ function MindNode({ id, data, selected }) {
 
   return (
     <div
-      className={`mind-node c-${data.color}${data.root ? ' is-root' : ''}${selected ? ' is-selected' : ''}${matches.has(id) ? ' is-match' : ''}${currentMatch === id ? ' is-current' : ''}${task?.done ? ' is-done' : ''}`}
+      className={`mind-node c-${data.color}${data.root ? ' is-root' : ''}${selected ? ' is-selected' : ''}${matches.has(id) ? ' is-match' : ''}${currentMatch === id ? ' is-current' : ''}${task?.done ? ' is-done' : ''}${spotlight && !spotlight.has(id) ? ' is-dim' : ''}${spotFocus === id ? ' is-spot' : ''}`}
       onDoubleClick={() => setEditing(true)}
       data-tour={data.root ? 'root-node' : undefined}
     >

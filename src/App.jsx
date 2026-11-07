@@ -19,6 +19,7 @@ import Inspector from './components/Inspector.jsx';
 import { EmptyState, ShortcutsDialog, Toast } from './components/Overlays.jsx';
 // Loaded on demand: most sessions never open these, so they stay out of the first download
 const Tour = lazy(() => import('./components/Tour.jsx'));
+const Presenter = lazy(() => import('./components/Presenter.jsx'));
 const PasteDialog = lazy(() => import('./components/PasteDialog.jsx'));
 const TemplateGallery = lazy(() => import('./components/Templates.jsx').then((m) => ({ default: m.TemplateGallery })));
 import { buildDemoMaps } from './lib/demoData.js';
@@ -30,6 +31,7 @@ import { fileName, parseFile, toFile } from './lib/mapFile.js';
 import { addOutlineUnder, countOutline, mapFromOutline, parseOutline, toOutline } from './lib/outline.js';
 import { descendants, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
 import { navigate } from './lib/navigate.js';
+import { buildSlides } from './lib/presentation.js';
 import { rollUpProgress, taskList } from './lib/tasks.js';
 import TasksPanel from './components/TasksPanel.jsx';
 import OutlineView from './components/OutlineView.jsx';
@@ -93,6 +95,8 @@ export default function App() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [editRequest, setEditRequest] = useState(null);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [presenting, setPresenting] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
   const [viewMode, setViewMode] = useState(() => (safeGet(storageKey('view')) === 'outline' ? 'outline' : 'map'));
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -415,6 +419,38 @@ export default function App() {
     setNodes((ns) => ns.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })));
   }, []);
 
+  // ---- Presentation ----
+  const slides = useMemo(() => (presenting ? buildSlides(nodes, edges, hiddenIds(nodes, edges)) : []), [presenting, nodes, edges]);
+  const slide = slides[slideIndex];
+
+  const startPresenting = () => {
+    if (viewMode !== 'map') setViewMode('map');
+    setSearchOpen(false);
+    setSlideIndex(0);
+    setPresenting(true);
+    // Full screen where the browser allows it; the presentation works without it too
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+  const stopPresenting = useCallback(() => {
+    setPresenting(false);
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    requestAnimationFrame(() => fitView({ padding: 0.25, duration: 300 }));
+  }, [fitView]);
+
+  // Leaving full screen with the browser's own Esc also ends the presentation
+  useEffect(() => {
+    const onFs = () => !document.fullscreenElement && presenting && stopPresenting();
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, [presenting, stopPresenting]);
+
+  // Zoom to the ideas on the current slide
+  useEffect(() => {
+    if (!presenting || !slide) return;
+    const t = setTimeout(() => fitView({ nodes: slide.ids.map((id) => ({ id })), padding: 0.3, duration: 650, maxZoom: 1.4 }), 80);
+    return () => clearTimeout(t);
+  }, [presenting, slide, fitView]);
+
   // ---- Tasks ----
   const progress = useMemo(() => rollUpProgress(nodes, edges), [nodes, edges]);
   const openTaskCount = useMemo(() => taskList(nodes).length, [nodes]);
@@ -488,8 +524,8 @@ export default function App() {
     for (const e of edges) childCounts[e.source] = (childCounts[e.source] ?? 0) + 1;
     const hiddenCounts = {};
     for (const n of nodes) if (n.data.collapsed) hiddenCounts[n.id] = descendants(edges, n.id).size;
-    return { childCounts, hiddenCounts, matches: new Set(searchOpen ? matches : []), currentMatch: searchOpen ? currentMatch : null, toggleCollapse, editRequest, progress, toggleTask };
-  }, [nodes, edges, matches, currentMatch, searchOpen, toggleCollapse, editRequest, progress, toggleTask]);
+    return { childCounts, hiddenCounts, matches: new Set(searchOpen ? matches : []), currentMatch: searchOpen ? currentMatch : null, toggleCollapse, editRequest, progress, toggleTask, spotlight: presenting && slide ? new Set(slide.ids) : null, spotFocus: presenting ? slide?.focus : null };
+  }, [nodes, edges, matches, currentMatch, searchOpen, toggleCollapse, editRequest, progress, toggleTask, presenting, slide]);
 
   // ---- Keyboard navigation ----
   // Pan only if the newly selected idea is outside the visible canvas
@@ -578,7 +614,7 @@ export default function App() {
         setSearchOpen(true);
         return;
       }
-      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen || pasteOpen) return; // inputs keep their own text undo
+      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen || pasteOpen || presenting) return; // inputs keep their own text undo
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === 'z') {
         e.preventDefault();
@@ -624,7 +660,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection, toggleTask]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection, toggleTask, presenting]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -637,7 +673,7 @@ export default function App() {
   const childCount = useMemo(() => (selected ? childrenOf(edges, selected.id).length : 0), [selected, edges]);
 
   return (
-    <div className={`app${(selected && inspectorOpen) || (tasksOpen && activeId) ? ' has-inspector' : ''}`}>
+    <div className={`app${(selected && inspectorOpen) || (tasksOpen && activeId) ? ' has-inspector' : ''}${presenting ? ' is-presenting' : ''}`}>
       <Sidebar
         maps={maps}
         activeId={activeId}
@@ -684,6 +720,7 @@ export default function App() {
               onRedo={doRedo}
               onSearch={() => setSearchOpen(true)}
               onTasks={() => setTasksOpen((v) => !v)}
+              onPresent={startPresenting}
               tasksOpen={tasksOpen}
               openTaskCount={openTaskCount}
               onExport={exportAs}
@@ -700,7 +737,7 @@ export default function App() {
               ) : (
               <ReactFlow
                 nodes={viewNodes}
-                edges={viewEdges}
+                edges={presenting && slide ? viewEdges.map((e) => (slide.ids.includes(e.source) && slide.ids.includes(e.target) ? e : { ...e, className: 'is-dim' })) : viewEdges}
                 nodeTypes={nodeTypes}
                 defaultEdgeOptions={defaultEdgeOptions}
                 onNodesChange={onNodesChange}
@@ -736,7 +773,18 @@ export default function App() {
                   }}
                 />
               )}
-              {viewMode === 'map' && (
+              {presenting && slides.length > 0 && (
+                <Suspense fallback={null}>
+                  <Presenter
+                    slides={slides}
+                    index={Math.min(slideIndex, slides.length - 1)}
+                    notes={nodes.find((n) => n.id === slide?.focus)?.data.notes}
+                    onIndex={setSlideIndex}
+                    onExit={stopPresenting}
+                  />
+                </Suspense>
+              )}
+              {viewMode === 'map' && !presenting && (
               <p className="hint">
                 Double-click to edit · <kbd>Tab</kbd> child · <kbd>Enter</kbd> sibling · <kbd>?</kbd> shortcuts
               </p>

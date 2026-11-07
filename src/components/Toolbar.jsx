@@ -18,6 +18,7 @@ import {
   Menu,
   Moon,
   Network,
+  Presentation,
   Redo2,
   Search,
   Sun,
@@ -56,6 +57,7 @@ export default function Toolbar({
   onTheme,
   onHelp,
   onTour,
+  onPresent,
   viewMode,
   onViewMode,
 }) {
@@ -168,6 +170,9 @@ export default function Toolbar({
           {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
         </button>
         </span>
+        <button className="btn btn--ghost" onClick={onPresent} title="Present this map (full screen)">
+          <Presentation size={16} /> <span className="btn__text">Present</span>
+        </button>
         <button className="btn btn--ghost btn--guide" onClick={onTour} title="Guided tour" data-tour="guide">
           <Compass size={16} /> <span className="btn__text">Guide</span>
         </button>
