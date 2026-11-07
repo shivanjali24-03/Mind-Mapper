@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ENV_LABEL } from '../env.js';
-import { Check, Cloud, Compass, HardDrive, Map, Plus, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import Logo from './Logo.jsx';
+import { Check, Cloud, Compass, HardDrive, Plus, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
 
 const timeAgo = (iso) => {
   const s = Math.max(1, Math.round((Date.now() - new Date(iso)) / 1000));
@@ -24,7 +25,7 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap
     <aside className={`sidebar${open ? ' is-open' : ''}`} aria-label="Your mind maps">
       <div className="brand">
         <span className="brand__mark" aria-hidden="true">
-          <Map size={18} />
+          <Logo size={34} />
         </span>
         <span className="brand__name">Mind Mapper</span>
         {ENV_LABEL && (
