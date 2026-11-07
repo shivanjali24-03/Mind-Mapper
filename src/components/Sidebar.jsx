@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { Check, Cloud, Compass, HardDrive, Map, Plus, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import { ENV_LABEL } from '../env.js';
+import Logo from './Logo.jsx';
+import { Check, Cloud, Compass, HardDrive, Plus, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
 
 const timeAgo = (iso) => {
   const s = Math.max(1, Math.round((Date.now() - new Date(iso)) / 1000));
@@ -23,9 +25,14 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap
     <aside className={`sidebar${open ? ' is-open' : ''}`} aria-label="Your mind maps">
       <div className="brand">
         <span className="brand__mark" aria-hidden="true">
-          <Map size={18} />
+          <Logo size={34} />
         </span>
         <span className="brand__name">Mind Mapper</span>
+        {ENV_LABEL && (
+          <span className={`env-badge env-badge--${ENV_LABEL.toLowerCase()}`} title="Not production: test data only">
+            {ENV_LABEL}
+          </span>
+        )}
         <button className="icon-btn sidebar__close" onClick={onClose} aria-label="Close sidebar">
           <X size={18} />
         </button>
