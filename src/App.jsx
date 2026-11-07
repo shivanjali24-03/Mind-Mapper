@@ -23,6 +23,7 @@ const TemplateGallery = lazy(() => import('./components/Templates.jsx').then((m)
 import { buildDemoMaps } from './lib/demoData.js';
 import { TEMPLATES, addChild, addSibling, childrenOf, layoutTree, removeWithDescendants } from './lib/mapOps.js';
 import * as storage from './api/storage.js';
+import { canRedo, canUndo, emptyHistory, record, redo, undo } from './lib/history.js';
 
 const nodeTypes = { mind: MindNode };
 const MINIMAP_COLORS = { violet: '#8b5cf6', cyan: '#06b6d4', pink: '#ec4899', amber: '#f59e0b', emerald: '#10b981', slate: '#64748b' };
@@ -34,12 +35,14 @@ const SEEDED_KEY = 'mindmapper.seeded';
 const TOUR_KEY = 'mindmapper.tourDone';
 
 // Only persist what matters, so selection or measuring doesn't trigger saves
-const snapshot = (title, nodes, edges) =>
-  JSON.stringify({
-    title,
-    nodes: nodes.map(({ id, type, position, data }) => ({ id, type, position, data })),
-    edges: edges.map(({ id, source, target, type }) => ({ id, source, target, type })),
-  });
+const cleanGraph = (nodes, edges) => ({
+  nodes: nodes.map(({ id, type, position, data }) => ({ id, type, position, data })),
+  edges: edges.map(({ id, source, target, type }) => ({ id, source, target, type })),
+});
+const snapshot = (title, nodes, edges) => JSON.stringify({ title, ...cleanGraph(nodes, edges) });
+
+// The part of the map that undo/redo restores (not the title, not selection)
+const graphSnapshot = (nodes, edges) => JSON.stringify(cleanGraph(nodes, edges));
 
 const safeGet = (k) => {
   try {
@@ -76,6 +79,11 @@ export default function App() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [toast, setToast] = useState('');
   const savedRef = useRef('');
+  // Undo/redo: `stableRef` is the last settled state; changes settle after a short pause
+  const [history, setHistory] = useState(emptyHistory);
+  const stableRef = useRef('');
+  const settleTimer = useRef(null);
+  const latest = useRef({ nodes: [], edges: [] });
   const toastTimer = useRef(null);
 
   const selected = nodes.find((n) => n.selected) ?? null;
@@ -102,6 +110,9 @@ export default function App() {
         setNodes(map.nodes ?? []);
         setEdges(map.edges ?? []);
         savedRef.current = snapshot(map.title, map.nodes ?? [], map.edges ?? []);
+        clearTimeout(settleTimer.current);
+        stableRef.current = graphSnapshot(map.nodes ?? [], map.edges ?? []);
+        setHistory(emptyHistory());
         setStatus('saved');
         setSidebarOpen(false);
         safeSet(LAST_KEY, map.id);
@@ -280,6 +291,52 @@ export default function App() {
     }
   };
 
+  // ---- Undo / redo ----
+  latest.current = { nodes, edges };
+
+  // Record a history step once the map has been still for 400 ms,
+  // so a whole drag or a burst of typing becomes a single undo step
+  useEffect(() => {
+    if (!activeId) return;
+    const current = graphSnapshot(nodes, edges);
+    if (current === stableRef.current) return;
+    clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => {
+      const previous = stableRef.current;
+      stableRef.current = current;
+      setHistory((h) => record(h, previous));
+    }, 400);
+    return () => clearTimeout(settleTimer.current);
+  }, [activeId, nodes, edges]);
+
+  const settleNow = useCallback(() => {
+    clearTimeout(settleTimer.current);
+    const current = graphSnapshot(latest.current.nodes, latest.current.edges);
+    if (current === stableRef.current) return history;
+    const h = record(history, stableRef.current);
+    stableRef.current = current;
+    return h;
+  }, [history]);
+
+  const restore = useCallback((snap) => {
+    const g = JSON.parse(snap);
+    stableRef.current = snap;
+    setNodes(g.nodes);
+    setEdges(g.edges);
+  }, []);
+
+  const doUndo = useCallback(() => {
+    const r = undo(settleNow(), stableRef.current);
+    setHistory(r.history);
+    if (r.snapshot) restore(r.snapshot);
+  }, [settleNow, restore]);
+
+  const doRedo = useCallback(() => {
+    const r = redo(settleNow(), stableRef.current);
+    setHistory(r.history);
+    if (r.snapshot) restore(r.snapshot);
+  }, [settleNow, restore]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e) => {
@@ -288,7 +345,19 @@ export default function App() {
         save();
         return;
       }
-      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen) return;
+      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen) return; // inputs keep their own text undo
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) doRedo();
+        else doUndo();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        doRedo();
+        return;
+      }
       if (e.key === 'Tab' && selected) {
         e.preventDefault();
         add('child');
@@ -307,7 +376,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, doUndo, doRedo]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -356,6 +425,10 @@ export default function App() {
               onDelete={removeSelected}
               onFit={() => fitView({ padding: 0.25, duration: 300 })}
               onTidy={tidy}
+              canUndo={canUndo(history)}
+              canRedo={canRedo(history)}
+              onUndo={doUndo}
+              onRedo={doRedo}
               onExport={exportPng}
               onTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               onHelp={() => setHelp(true)}
