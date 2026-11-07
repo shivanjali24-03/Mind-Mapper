@@ -16,6 +16,7 @@ import {
   Moon,
   Network,
   Redo2,
+  Search,
   Sun,
   Trash2,
   Undo2,
@@ -44,6 +45,7 @@ export default function Toolbar({
   canRedo,
   onUndo,
   onRedo,
+  onSearch,
   onExport,
   onTheme,
   onHelp,
@@ -81,6 +83,9 @@ export default function Toolbar({
         </button>
         <button className="icon-btn" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl/⌘+Shift+Z)" aria-label="Redo">
           <Redo2 size={17} />
+        </button>
+        <button className="icon-btn" onClick={onSearch} title="Search ideas (Ctrl/⌘+K)" aria-label="Search ideas">
+          <Search size={17} />
         </button>
         <span className="toolbar__sep" />
         <button className="btn btn--ghost" onClick={onAddChild} disabled={!hasSelection} title="Add child (Tab)" data-tour="add-child">
