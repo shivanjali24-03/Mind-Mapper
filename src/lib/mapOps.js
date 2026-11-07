@@ -67,7 +67,9 @@ export function layoutTree(nodes, edges) {
   const root = nodes.find((n) => n.data.root) ?? nodes[0];
   if (!root) return nodes;
   const ids = new Set(nodes.map((n) => n.id));
-  const kids = (id) => childrenOf(edges, id).filter((k) => ids.has(k));
+  const byIdAll = new Map(nodes.map((n) => [n.id, n]));
+  // A collapsed idea is laid out like a leaf: its hidden children don't take up space
+  const kids = (id) => (byIdAll.get(id)?.data.collapsed ? [] : childrenOf(edges, id).filter((k) => ids.has(k)));
 
   const leaves = new Map();
   const visiting = new Set();
