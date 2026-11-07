@@ -2207,3 +2207,7 @@ kbd {
     padding-top: 44px;
   }
 }
+.link-btn--accent {
+  color: var(--accent);
+  font-weight: 700;
+}

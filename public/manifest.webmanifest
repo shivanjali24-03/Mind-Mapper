@@ -1,0 +1,16 @@
+{
+  "name": "Mind Mapper",
+  "short_name": "Mind Mapper",
+  "description": "Turn ideas into plans: visual mind maps with tasks, outline view and presentation mode.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0918",
+  "theme_color": "#7c3aed",
+  "categories": ["productivity", "education"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
