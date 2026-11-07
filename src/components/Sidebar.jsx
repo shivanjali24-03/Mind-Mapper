@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { ENV_LABEL } from '../env.js';
 import { Check, Cloud, Compass, HardDrive, Map, Plus, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
 
 const timeAgo = (iso) => {
@@ -26,6 +27,11 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap
           <Map size={18} />
         </span>
         <span className="brand__name">Mind Mapper</span>
+        {ENV_LABEL && (
+          <span className={`env-badge env-badge--${ENV_LABEL.toLowerCase()}`} title="Not production: test data only">
+            {ENV_LABEL}
+          </span>
+        )}
         <button className="icon-btn sidebar__close" onClick={onClose} aria-label="Close sidebar">
           <X size={18} />
         </button>
