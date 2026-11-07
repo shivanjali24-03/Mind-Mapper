@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ENV_LABEL } from '../env.js';
 import Logo from './Logo.jsx';
-import { Check, Cloud, Compass, HardDrive, Plus, Search, Sparkles, Trash2, Upload, X, ClipboardPaste, Crown } from 'lucide-react';
+import { Check, Cloud, Compass, HardDrive, Plus, Search, Sparkles, Trash2, Upload, X, ClipboardPaste, Crown, Info } from 'lucide-react';
 import { PLANS, isPro } from '../lib/plans.js';
 
 const timeAgo = (iso) => {
@@ -12,7 +12,7 @@ const timeAgo = (iso) => {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
-export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap, onDelete, onClose, onLoadDemo, onTour, onImport, onPasteText, plan, onPlan }) {
+export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap, onDelete, onClose, onLoadDemo, onTour, onImport, onPasteText, plan, onPlan, onAbout }) {
   const [query, setQuery] = useState('');
   const [confirmId, setConfirmId] = useState(null);
   const fileRef = useRef(null);
@@ -97,6 +97,9 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap
             if (file) onImport(file);
           }}
         />
+        <button className="link-btn" onClick={onAbout}>
+          <Info size={15} /> About Mind Mapper
+        </button>
         <button className="link-btn" onClick={onTour}>
           <Compass size={15} /> Take the tour
         </button>
