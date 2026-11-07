@@ -1670,3 +1670,70 @@ kbd {
 .app.is-presenting .mind-handle {
   display: none !important;
 }
+
+/* ---------- Focus mode ---------- */
+.focusbar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 24px);
+  padding: 6px 6px 6px 12px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: var(--shadow);
+  z-index: 14;
+  animation: pop 0.15s ease-out;
+}
+.focusbar__label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.focusbar ol {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+  overflow: hidden;
+}
+.focusbar li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.focusbar li button {
+  border: none;
+  background: none;
+  padding: 4px 6px;
+  border-radius: 7px;
+  color: var(--muted);
+}
+.focusbar li button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.focusbar__current {
+  padding: 4px 6px;
+  font-weight: 700;
+  color: var(--text);
+}
+.focusbar__exit {
+  height: 30px;
+  flex: none;
+}
+.icon-btn.is-on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
