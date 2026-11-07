@@ -19,6 +19,7 @@ import Inspector from './components/Inspector.jsx';
 import { EmptyState, ShortcutsDialog, Toast } from './components/Overlays.jsx';
 // Loaded on demand: most sessions never open these, so they stay out of the first download
 const Tour = lazy(() => import('./components/Tour.jsx'));
+const PasteDialog = lazy(() => import('./components/PasteDialog.jsx'));
 const TemplateGallery = lazy(() => import('./components/Templates.jsx').then((m) => ({ default: m.TemplateGallery })));
 import { buildDemoMaps } from './lib/demoData.js';
 import { TEMPLATES, addChild, addSibling, childrenOf, layoutTree, removeWithDescendants } from './lib/mapOps.js';
@@ -26,6 +27,7 @@ import * as storage from './api/storage.js';
 import { storageKey } from './env.js';
 import { canRedo, canUndo, emptyHistory, record, redo, undo } from './lib/history.js';
 import { fileName, parseFile, toFile } from './lib/mapFile.js';
+import { addOutlineUnder, countOutline, mapFromOutline, parseOutline, toOutline } from './lib/outline.js';
 import { descendants, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
 import { ViewContext } from './components/viewContext.js';
 import SearchBar from './components/SearchBar.jsx';
@@ -82,6 +84,7 @@ export default function App() {
   const [help, setHelp] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [matchIndex, setMatchIndex] = useState(0);
@@ -301,6 +304,16 @@ export default function App() {
   const exportAs = async (kind) => {
     if (!getNodes().length) return;
     try {
+      if (kind === 'copy-outline') {
+        await navigator.clipboard.writeText(toOutline(nodes, edges));
+        return notify('Outline copied. Paste it into any doc or chat');
+      }
+      if (kind === 'md') {
+        const href = URL.createObjectURL(new Blob([toOutline(nodes, edges)], { type: 'text/markdown' }));
+        download(href, fileName(title, 'md'));
+        setTimeout(() => URL.revokeObjectURL(href), 1000);
+        return notify('Markdown exported');
+      }
       if (kind === 'json') {
         const blob = new Blob([toFile({ title, nodes, edges })], { type: 'application/json' });
         const href = URL.createObjectURL(blob);
@@ -323,6 +336,46 @@ export default function App() {
       notify('Export failed');
     }
   };
+
+  // Create a new map from pasted text
+  const createFromText = async (text) => {
+    try {
+      const map = mapFromOutline(parseOutline(text));
+      setPasteOpen(false);
+      const created = await storage.createMap(map);
+      setMaps((list) => [{ id: created.id, title: created.title, updatedAt: created.updatedAt }, ...list]);
+      await openMap(created.id);
+      notify(`Created "${created.title}" with ${map.nodes.length} ideas`);
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+
+  // Paste text onto the canvas: it becomes branches under the selected idea (or the central idea)
+  useEffect(() => {
+    const onPaste = (e) => {
+      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen || pasteOpen) return;
+      const text = e.clipboardData?.getData('text/plain');
+      if (!text?.trim()) return;
+      e.preventDefault();
+      if (!activeId) return createFromText(text);
+      let forest;
+      try {
+        forest = parseOutline(text);
+      } catch (err) {
+        return notify(err.message);
+      }
+      const current = latest.current;
+      const target = current.nodes.find((n) => n.selected) ?? current.nodes.find((n) => n.data.root);
+      if (!target) return;
+      const r = addOutlineUnder(current.nodes, current.edges, target.id, forest);
+      setNodes(r.nodes.map((n) => ({ ...n, selected: n.id === r.added[0] })));
+      setEdges(r.edges);
+      notify(`Added ${countOutline(forest)} ${countOutline(forest) === 1 ? 'idea' : 'ideas'} under "${target.data.label}"`);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  });
 
   const importFile = async (file) => {
     try {
@@ -449,7 +502,7 @@ export default function App() {
         setSearchOpen(true);
         return;
       }
-      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen) return; // inputs keep their own text undo
+      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen || pasteOpen) return; // inputs keep their own text undo
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === 'z') {
         e.preventDefault();
@@ -480,7 +533,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, doUndo, doRedo, activeId]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -508,6 +561,10 @@ export default function App() {
         onClose={() => setSidebarOpen(false)}
         onLoadDemo={loadDemo}
         onImport={importFile}
+        onPasteText={() => {
+          setSidebarOpen(false);
+          setPasteOpen(true);
+        }}
         onTour={() => {
           setSidebarOpen(false);
           setTourOpen(true);
@@ -588,7 +645,7 @@ export default function App() {
               <button className="icon-btn floating-menu" onClick={() => setSidebarOpen(true)} aria-label="Open maps">
                 ☰
               </button>
-              <EmptyState onCreate={createMap} onLoadDemo={loadDemo} onTour={() => setTourOpen(true)} />
+              <EmptyState onCreate={createMap} onLoadDemo={loadDemo} onTour={() => setTourOpen(true)} onPasteText={() => setPasteOpen(true)} />
             </>
           )
         )}
@@ -607,6 +664,7 @@ export default function App() {
 
       {help && <ShortcutsDialog onClose={() => setHelp(false)} />}
       <Suspense fallback={null}>
+      {pasteOpen && <PasteDialog onCreate={createFromText} onClose={() => setPasteOpen(false)} />}
       {galleryOpen && (
         <TemplateGallery
           onPick={(key) => {

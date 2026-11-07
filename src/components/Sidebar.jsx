@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ENV_LABEL } from '../env.js';
 import Logo from './Logo.jsx';
-import { Check, Cloud, Compass, HardDrive, Plus, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import { Check, Cloud, Compass, HardDrive, Plus, Search, Sparkles, Trash2, Upload, X, ClipboardPaste } from 'lucide-react';
 
 const timeAgo = (iso) => {
   const s = Math.max(1, Math.round((Date.now() - new Date(iso)) / 1000));
@@ -11,7 +11,7 @@ const timeAgo = (iso) => {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
-export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap, onDelete, onClose, onLoadDemo, onTour, onImport }) {
+export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap, onDelete, onClose, onLoadDemo, onTour, onImport, onPasteText }) {
   const [query, setQuery] = useState('');
   const [confirmId, setConfirmId] = useState(null);
   const fileRef = useRef(null);
@@ -78,6 +78,9 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap
       <div className="sidebar__footer">
         <button className="link-btn" onClick={onLoadDemo}>
           <Sparkles size={15} /> Load demo maps
+        </button>
+        <button className="link-btn" onClick={onPasteText}>
+          <ClipboardPaste size={15} /> Paste text to map
         </button>
         <button className="link-btn" onClick={() => fileRef.current?.click()}>
           <Upload size={15} /> Import JSON
