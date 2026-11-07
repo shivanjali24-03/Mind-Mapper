@@ -43,6 +43,7 @@
 | 📱 **Responsive** | Slide-in sidebar and bottom-sheet inspector on phones |
 | 🧭 **Guided tour** | A 9-step interactive walkthrough with a spotlight on each control. It starts on the first visit and can be replayed from **Guide** |
 | 🎲 **Demo data** | Four realistic sample maps (patient portal plan, sprint planning, React learning path, team sync) load on the first visit, or any time with **Load demo maps** |
+| 📲 **Installable app** | Install Mind Mapper on desktop or phone ("Install app" in the sidebar, or the browser's install button). A service worker pre-caches the whole app, so it opens and works with no internet |
 | 🔌 **Works offline** | If the API or database isn't available, it switches to a local demo mode that saves in the browser |
 
 ## 📸 Screenshots
