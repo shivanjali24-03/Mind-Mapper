@@ -29,6 +29,7 @@ import { canRedo, canUndo, emptyHistory, record, redo, undo } from './lib/histor
 import { fileName, parseFile, toFile } from './lib/mapFile.js';
 import { addOutlineUnder, countOutline, mapFromOutline, parseOutline, toOutline } from './lib/outline.js';
 import { descendants, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
+import { navigate } from './lib/navigate.js';
 import { ViewContext } from './components/viewContext.js';
 import SearchBar from './components/SearchBar.jsx';
 
@@ -66,10 +67,12 @@ const safeSet = (k, v) => {
   }
 };
 
+const ARROWS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+
 const isTyping = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
 
 export default function App() {
-  const { fitView, getNodes, setCenter, getZoom } = useReactFlow();
+  const { fitView, getNodes, setCenter, getZoom, getViewport } = useReactFlow();
   const [mode, setMode] = useState('local');
   const [maps, setMaps] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -85,6 +88,7 @@ export default function App() {
   const [tourOpen, setTourOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
+  const [editRequest, setEditRequest] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [matchIndex, setMatchIndex] = useState(0);
@@ -440,8 +444,36 @@ export default function App() {
     for (const e of edges) childCounts[e.source] = (childCounts[e.source] ?? 0) + 1;
     const hiddenCounts = {};
     for (const n of nodes) if (n.data.collapsed) hiddenCounts[n.id] = descendants(edges, n.id).size;
-    return { childCounts, hiddenCounts, matches: new Set(searchOpen ? matches : []), currentMatch: searchOpen ? currentMatch : null, toggleCollapse };
-  }, [nodes, edges, matches, currentMatch, searchOpen, toggleCollapse]);
+    return { childCounts, hiddenCounts, matches: new Set(searchOpen ? matches : []), currentMatch: searchOpen ? currentMatch : null, toggleCollapse, editRequest };
+  }, [nodes, edges, matches, currentMatch, searchOpen, toggleCollapse, editRequest]);
+
+  // ---- Keyboard navigation ----
+  // Pan only if the newly selected idea is outside the visible canvas
+  const keepInView = useCallback(
+    (node) => {
+      const canvas = document.querySelector('.canvas')?.getBoundingClientRect();
+      if (!canvas || !node) return;
+      const { x, y, zoom } = getViewport();
+      const sx = node.position.x * zoom + x;
+      const sy = node.position.y * zoom + y;
+      const m = 60;
+      if (sx < m || sy < m || sx + 200 * zoom > canvas.width - m || sy + 44 * zoom > canvas.height - m) {
+        setCenter(node.position.x + 90, node.position.y + 21, { zoom, duration: 200 });
+      }
+    },
+    [getViewport, setCenter],
+  );
+
+  const moveSelection = useCallback(
+    (dir) => {
+      const { nodes: ns, edges: es } = latest.current;
+      const id = navigate(ns, es, ns.find((n) => n.selected)?.id ?? null, dir, hiddenIds(ns, es));
+      if (!id) return;
+      setNodes((list) => list.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })));
+      keepInView(ns.find((n) => n.id === id));
+    },
+    [keepInView],
+  );
 
   // ---- Undo / redo ----
   latest.current = { nodes, edges };
@@ -515,6 +547,16 @@ export default function App() {
         doRedo();
         return;
       }
+      if (ARROWS[e.key] && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        moveSelection(ARROWS[e.key]);
+        return;
+      }
+      if ((e.key === 'F2' || e.key === ' ') && selected) {
+        e.preventDefault();
+        setEditRequest({ id: selected.id, at: Date.now() });
+        return;
+      }
       if (e.key === 'Tab' && selected) {
         e.preventDefault();
         add('child');
@@ -533,7 +575,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -609,6 +651,8 @@ export default function App() {
                 onConnect={onConnect}
                 onNodeClick={() => setInspectorOpen(true)}
                 deleteKeyCode={null}
+                disableKeyboardA11y
+                panActivationKeyCode={null}
                 colorMode={theme}
                 fitView
                 minZoom={0.2}

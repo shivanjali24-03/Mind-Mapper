@@ -5,13 +5,17 @@ import { useView } from './viewContext.js';
 
 function MindNode({ id, data, selected }) {
   const { updateNodeData } = useReactFlow();
-  const { childCounts, hiddenCounts, matches, currentMatch, toggleCollapse } = useView();
+  const { childCounts, hiddenCounts, matches, currentMatch, toggleCollapse, editRequest } = useView();
   const kids = childCounts[id] ?? 0;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(data.label);
   const inputRef = useRef(null);
 
   useEffect(() => setDraft(data.label), [data.label]);
+  // F2 / Space from the keyboard asks this idea to start editing
+  useEffect(() => {
+    if (editRequest?.id === id) setEditing(true);
+  }, [editRequest, id]);
   useEffect(() => {
     if (editing) inputRef.current?.select();
   }, [editing]);
