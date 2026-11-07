@@ -33,6 +33,7 @@
 | 🗒️ **Outline view** | Switch between **Map** and **Outline** (an editable bullet list of the same map). `Enter` new line, `Tab` / `Shift+Tab` indent and outdent, `Alt+↑↓` reorder, `⌫` on an empty line deletes it. Changes show on the map instantly |
 | 🎤 **Presentation mode** | Click **Present** to show the map full screen: an overview, then one slide per branch. It zooms smoothly to each branch, dims the rest, and shows the idea's notes as speaker notes. `→`/`Space` next, `←` back, `Esc` exit |
 | 🎯 **Focus mode** | `Shift+F` (or the focus button) shows only the selected branch, with a clickable breadcrumb to move up. `Esc` returns to the full map |
+| 💎 **Free & Pro plans** | Free: 5 maps with all editing, tasks, outline and focus. Pro ($8/month or $72/year): unlimited maps, PDF/JSON export and import, and presentation mode. Friendly upgrade prompts explain what's included. *Demo checkout: no payment taken* |
 | 📝 **Inspector panel** | Edit text, pick from 6 colours and add notes to any idea |
 | 💾 **Autosave** | Changes save automatically, with a live "Saving… / Saved" status |
 | 🗂️ **Many maps** | Sidebar with search, quick switching and safe two-step delete |

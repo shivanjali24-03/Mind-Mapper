@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { ENV_LABEL } from '../env.js';
 import Logo from './Logo.jsx';
-import { Check, Cloud, Compass, HardDrive, Plus, Search, Sparkles, Trash2, Upload, X, ClipboardPaste } from 'lucide-react';
+import { Check, Cloud, Compass, HardDrive, Plus, Search, Sparkles, Trash2, Upload, X, ClipboardPaste, Crown } from 'lucide-react';
+import { PLANS, isPro } from '../lib/plans.js';
 
 const timeAgo = (iso) => {
   const s = Math.max(1, Math.round((Date.now() - new Date(iso)) / 1000));
@@ -11,7 +12,7 @@ const timeAgo = (iso) => {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
-export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap, onDelete, onClose, onLoadDemo, onTour, onImport, onPasteText }) {
+export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap, onDelete, onClose, onLoadDemo, onTour, onImport, onPasteText, plan, onPlan }) {
   const [query, setQuery] = useState('');
   const [confirmId, setConfirmId] = useState(null);
   const fileRef = useRef(null);
@@ -100,6 +101,20 @@ export default function Sidebar({ maps, activeId, mode, open, onSelect, onNewMap
           <Compass size={15} /> Take the tour
         </button>
       </div>
+
+      <button className={`plan-chip${isPro(plan) ? ' is-pro' : ''}`} onClick={onPlan}>
+        <Crown size={14} />
+        {isPro(plan) ? (
+          <span>Pro plan</span>
+        ) : (
+          <>
+            <span>
+              Free · {Math.min(maps.length, PLANS.free.maxMaps)}/{PLANS.free.maxMaps} maps
+            </span>
+            <strong>Upgrade</strong>
+          </>
+        )}
+      </button>
 
       <div className={`mode mode--${mode}`} title={mode === 'api' ? 'Saved to the server' : 'Saved in this browser only'}>
         {mode === 'api' ? <Cloud size={14} /> : <HardDrive size={14} />}
