@@ -1462,3 +1462,113 @@ kbd {
   background: var(--surface-2);
   color: var(--muted);
 }
+
+/* ---------- Map / Outline switch ---------- */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  flex: none;
+}
+.segmented button {
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13px;
+}
+.segmented button.is-on {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+/* ---------- Outline view ---------- */
+.outline {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 28px 20px 80px;
+}
+.outline__inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.outline-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  border-radius: 8px;
+  --node: var(--c-violet);
+}
+.outline-row.c-violet { --node: var(--c-violet); }
+.outline-row.c-cyan { --node: var(--c-cyan); }
+.outline-row.c-pink { --node: var(--c-pink); }
+.outline-row.c-amber { --node: var(--c-amber); }
+.outline-row.c-emerald { --node: var(--c-emerald); }
+.outline-row.c-slate { --node: var(--c-slate); }
+.outline-row.is-focus {
+  background: var(--accent-soft);
+}
+.outline-row__toggle {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+}
+.outline-row__toggle:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.outline-row__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: 0 5px;
+  border-radius: 50%;
+  background: var(--node);
+}
+.outline-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 4px;
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 15px;
+}
+.outline-row.is-root input {
+  font-size: 22px;
+  font-weight: 800;
+}
+.outline-row.is-done input {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.outline-row__more {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--node);
+}
+.outline__help {
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 2;
+}
+@media (max-width: 860px) {
+  .segmented button {
+    padding: 0 8px;
+  }
+}
