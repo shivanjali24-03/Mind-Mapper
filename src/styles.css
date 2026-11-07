@@ -1894,3 +1894,21 @@ kbd {
     grid-template-columns: 1fr;
   }
 }
+
+/* Narrow toolbar (side panel open): keep the map title readable */
+.title-input {
+  min-width: 120px;
+}
+@media (max-width: 1600px) {
+  .app.has-inspector .status {
+    font-size: 0;
+    gap: 0;
+  }
+  .app.has-inspector .toolbar {
+    gap: 6px;
+  }
+  .app.has-inspector .toolbar [aria-label='Keyboard shortcuts'],
+  .app.has-inspector .toolbar .toolbar__sep {
+    display: none;
+  }
+}
