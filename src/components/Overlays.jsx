@@ -1,11 +1,12 @@
-import { Brain, Compass, Sparkles, X } from 'lucide-react';
+import { Compass, Sparkles, X } from 'lucide-react';
+import Logo from './Logo.jsx';
 import { TemplateGrid } from './Templates.jsx';
 
 export function EmptyState({ onCreate, onLoadDemo, onTour }) {
   return (
     <div className="empty">
       <div className="empty__icon" aria-hidden="true">
-        <Brain size={34} />
+        <Logo size={76} />
       </div>
       <h1>Map out your ideas</h1>
       <p>Start from a blank canvas or pick a template. Your work saves automatically.</p>
