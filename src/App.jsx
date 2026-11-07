@@ -32,6 +32,7 @@ import { descendants, hiddenIds, revealNode, searchNodes } from './lib/mapView.j
 import { navigate } from './lib/navigate.js';
 import { rollUpProgress, taskList } from './lib/tasks.js';
 import TasksPanel from './components/TasksPanel.jsx';
+import OutlineView from './components/OutlineView.jsx';
 import { ViewContext } from './components/viewContext.js';
 import SearchBar from './components/SearchBar.jsx';
 
@@ -92,6 +93,7 @@ export default function App() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [editRequest, setEditRequest] = useState(null);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [viewMode, setViewMode] = useState(() => (safeGet(storageKey('view')) === 'outline' ? 'outline' : 'map'));
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [matchIndex, setMatchIndex] = useState(0);
@@ -396,6 +398,23 @@ export default function App() {
     }
   };
 
+  // ---- Map / Outline view ----
+  const changeView = (mode) => {
+    setViewMode(mode);
+    safeSet(storageKey('view'), mode);
+    if (mode === 'map') requestAnimationFrame(() => fitView({ padding: 0.25, duration: 250 }));
+  };
+  const setGraph = useCallback((ns, es) => {
+    setNodes(ns);
+    setEdges(es);
+  }, []);
+  const setLabel = useCallback((id, label) => {
+    setNodes((ns) => ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, label } } : n)));
+  }, []);
+  const selectOnlyId = useCallback((id) => {
+    setNodes((ns) => ns.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })));
+  }, []);
+
   // ---- Tasks ----
   const progress = useMemo(() => rollUpProgress(nodes, edges), [nodes, edges]);
   const openTaskCount = useMemo(() => taskList(nodes).length, [nodes]);
@@ -671,9 +690,14 @@ export default function App() {
               onTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               onHelp={() => setHelp(true)}
               onTour={() => setTourOpen(true)}
+              viewMode={viewMode}
+              onViewMode={changeView}
             />
             <div className="canvas" data-tour="canvas">
               <ViewContext.Provider value={viewInfo}>
+              {viewMode === 'outline' ? (
+                <OutlineView nodes={nodes} edges={edges} onGraph={setGraph} onLabel={setLabel} onSelect={selectOnlyId} onUndo={doUndo} onRedo={doRedo} />
+              ) : (
               <ReactFlow
                 nodes={viewNodes}
                 edges={viewEdges}
@@ -696,6 +720,7 @@ export default function App() {
                 <Controls showInteractive={false} position="bottom-left" />
                 <MiniMap pannable zoomable position="bottom-right" nodeBorderRadius={10} nodeColor={minimapColor} className="minimap" />
               </ReactFlow>
+              )}
               </ViewContext.Provider>
               {searchOpen && (
                 <SearchBar
@@ -711,9 +736,11 @@ export default function App() {
                   }}
                 />
               )}
+              {viewMode === 'map' && (
               <p className="hint">
                 Double-click to edit · <kbd>Tab</kbd> child · <kbd>Enter</kbd> sibling · <kbd>?</kbd> shortcuts
               </p>
+              )}
             </div>
           </>
         ) : (

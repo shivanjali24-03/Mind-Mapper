@@ -56,6 +56,8 @@ export default function Toolbar({
   onTheme,
   onHelp,
   onTour,
+  viewMode,
+  onViewMode,
 }) {
   const S = STATUS[status] ?? STATUS.saved;
   const [exportOpen, setExportOpen] = useState(false);
@@ -79,6 +81,16 @@ export default function Toolbar({
         <Menu size={18} />
       </button>
       <input className="title-input" value={title} onChange={(e) => onTitle(e.target.value)} aria-label="Map title" maxLength={120} />
+      <div className="segmented" role="tablist" aria-label="View">
+        {[
+          ['map', 'Map'],
+          ['outline', 'Outline'],
+        ].map(([key, text]) => (
+          <button key={key} role="tab" aria-selected={viewMode === key} className={viewMode === key ? 'is-on' : ''} onClick={() => onViewMode(key)}>
+            {text}
+          </button>
+        ))}
+      </div>
       <span className={`status status--${status}`} role="status" data-tour="status">
         <S.icon size={14} className={status === 'saving' ? 'spin' : ''} /> {S.text}
       </span>
