@@ -1,9 +1,12 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { StickyNote } from 'lucide-react';
+import { Minus, StickyNote } from 'lucide-react';
+import { useView } from './viewContext.js';
 
 function MindNode({ id, data, selected }) {
   const { updateNodeData } = useReactFlow();
+  const { childCounts, hiddenCounts, matches, currentMatch, toggleCollapse } = useView();
+  const kids = childCounts[id] ?? 0;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(data.label);
   const inputRef = useRef(null);
@@ -21,7 +24,7 @@ function MindNode({ id, data, selected }) {
 
   return (
     <div
-      className={`mind-node c-${data.color}${data.root ? ' is-root' : ''}${selected ? ' is-selected' : ''}`}
+      className={`mind-node c-${data.color}${data.root ? ' is-root' : ''}${selected ? ' is-selected' : ''}${matches.has(id) ? ' is-match' : ''}${currentMatch === id ? ' is-current' : ''}`}
       onDoubleClick={() => setEditing(true)}
       data-tour={data.root ? 'root-node' : undefined}
     >
@@ -48,6 +51,20 @@ function MindNode({ id, data, selected }) {
       )}
       {data.notes && <StickyNote className="mind-node__note" size={13} aria-label="Has notes" />}
       <Handle type="source" position={Position.Right} className="mind-handle" />
+      {kids > 0 && (
+        <button
+          className={`collapse-btn nodrag${data.collapsed ? ' is-collapsed' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleCollapse(id);
+          }}
+          onDoubleClick={(e) => e.stopPropagation()}
+          aria-label={data.collapsed ? `Expand ${hiddenCounts[id]} hidden ideas` : 'Collapse branch'}
+          title={data.collapsed ? 'Expand branch' : 'Collapse branch'}
+        >
+          {data.collapsed ? `+${hiddenCounts[id]}` : <Minus size={11} />}
+        </button>
+      )}
     </div>
   );
 }

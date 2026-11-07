@@ -29,6 +29,7 @@ const SHORTCUTS = [
   ['Delete / Backspace', 'Delete idea and its branches'],
   ['T', 'Tidy up the layout'],
   ['F', 'Fit map to screen'],
+  ['⌘/Ctrl + K', 'Search ideas and notes'],
   ['⌘/Ctrl + Z', 'Undo'],
   ['⌘/Ctrl + Shift + Z', 'Redo'],
   ['⌘/Ctrl + S', 'Save now'],
