@@ -29,7 +29,8 @@ export function EmptyState({ onCreate, onLoadDemo, onTour, onPasteText }) {
 const SHORTCUTS = [
   ['Tab', 'Add a child idea'],
   ['Enter', 'Add a sibling idea'],
-  ['Double-click', 'Edit text'],
+  ['↑ ↓ ← →', 'Move between ideas'],
+  ['F2 / Space or double-click', 'Edit text'],
   ['Delete / Backspace', 'Delete idea and its branches'],
   ['T', 'Tidy up the layout'],
   ['F', 'Fit map to screen'],
