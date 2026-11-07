@@ -27,6 +27,7 @@
 | 🌳 **Auto-arrange** | A tidy tree layout keeps branches from overlapping, however big the map gets |
 | ⌨️ **Keyboard first** | `Tab` adds a child, `Enter` a sibling, `Del` deletes a branch, `T` tidies, `F` fits to screen |
 | ↩️ **Undo / redo** | Ctrl/⌘+Z and Ctrl/⌘+Shift+Z (or Ctrl+Y), plus toolbar buttons. A whole drag or a burst of typing counts as one step; up to 100 steps per map |
+| 🔍 **Search & collapse** | Ctrl/⌘+K searches ideas and notes, highlights matches and jumps between them. Collapse any branch with one click; a badge shows how many ideas are hidden, and search opens collapsed branches automatically |
 | 📝 **Inspector panel** | Edit text, pick from 6 colours and add notes to any idea |
 | 💾 **Autosave** | Changes save automatically, with a live "Saving… / Saved" status |
 | 🗂️ **Many maps** | Sidebar with search, quick switching and safe two-step delete |
