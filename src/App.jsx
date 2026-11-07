@@ -24,6 +24,10 @@ import { buildDemoMaps } from './lib/demoData.js';
 import { TEMPLATES, addChild, addSibling, childrenOf, layoutTree, removeWithDescendants } from './lib/mapOps.js';
 import * as storage from './api/storage.js';
 import { canRedo, canUndo, emptyHistory, record, redo, undo } from './lib/history.js';
+import { fileName, parseFile, toFile } from './lib/mapFile.js';
+import { descendants, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
+import { ViewContext } from './components/viewContext.js';
+import SearchBar from './components/SearchBar.jsx';
 
 const nodeTypes = { mind: MindNode };
 const MINIMAP_COLORS = { violet: '#8b5cf6', cyan: '#06b6d4', pink: '#ec4899', amber: '#f59e0b', emerald: '#10b981', slate: '#64748b' };
@@ -77,6 +81,9 @@ export default function App() {
   const [help, setHelp] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [matchIndex, setMatchIndex] = useState(0);
   const [toast, setToast] = useState('');
   const savedRef = useRef('');
   // Undo/redo: `stableRef` is the last settled state; changes settle after a short pause
@@ -264,32 +271,123 @@ export default function App() {
   const updateSelected = (patch) =>
     setNodes((ns) => ns.map((n) => (n.id === selected?.id ? { ...n, data: { ...n.data, ...patch } } : n)));
 
-  // Export the whole map as a PNG
-  const exportPng = async () => {
+  // ---- Export & import ----
+  const download = (href, name) => {
+    const a = document.createElement('a');
+    a.download = name;
+    a.href = href;
+    a.click();
+  };
+
+  // Render the whole map (not just the visible part) to a PNG data URL
+  const renderPng = async () => {
     const all = getNodes();
-    if (!all.length) return;
     const width = 1600;
     const height = 1000;
-    const bounds = getNodesBounds(all);
-    const vp = getViewportForBounds(bounds, width, height, 0.2, 2, 0.12);
+    const vp = getViewportForBounds(getNodesBounds(all), width, height, 0.2, 2, 0.12);
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim();
+    const { toPng } = await import('html-to-image'); // only loaded when exporting
+    const url = await toPng(document.querySelector('.react-flow__viewport'), {
+      backgroundColor: bg,
+      width,
+      height,
+      pixelRatio: 2,
+      style: { width: `${width}px`, height: `${height}px`, transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})` },
+    });
+    return { url, width, height };
+  };
+
+  const exportAs = async (kind) => {
+    if (!getNodes().length) return;
     try {
-      const { toPng } = await import('html-to-image'); // only needed when exporting
-      const url = await toPng(document.querySelector('.react-flow__viewport'), {
-        backgroundColor: bg,
-        width,
-        height,
-        style: { width: `${width}px`, height: `${height}px`, transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})` },
-      });
-      const a = document.createElement('a');
-      a.download = `${(title || 'mind-map').replace(/[^\w-]+/g, '-').toLowerCase()}.png`;
-      a.href = url;
-      a.click();
-      notify('PNG exported');
+      if (kind === 'json') {
+        const blob = new Blob([toFile({ title, nodes, edges })], { type: 'application/json' });
+        const href = URL.createObjectURL(blob);
+        download(href, fileName(title, 'json'));
+        setTimeout(() => URL.revokeObjectURL(href), 1000);
+      } else {
+        const { url, width, height } = await renderPng();
+        if (kind === 'png') download(url, fileName(title, 'png'));
+        else {
+          const { jsPDF } = await import('jspdf'); // only loaded when exporting a PDF
+          const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [width, height + 60] });
+          pdf.setFontSize(22);
+          pdf.text(title || 'Mind map', 32, 40);
+          pdf.addImage(url, 'PNG', 0, 60, width, height);
+          pdf.save(fileName(title, 'pdf'));
+        }
+      }
+      notify(`${kind.toUpperCase()} exported`);
     } catch {
       notify('Export failed');
     }
   };
+
+  const importFile = async (file) => {
+    try {
+      const map = parseFile(await file.text());
+      const created = await storage.createMap(map);
+      setMaps((list) => [{ id: created.id, title: created.title, updatedAt: created.updatedAt }, ...list]);
+      await openMap(created.id);
+      notify(`Imported "${created.title}"`);
+    } catch (err) {
+      notify(err.message || 'Import failed');
+    }
+  };
+
+  // ---- Collapse & search ----
+  const hidden = useMemo(() => hiddenIds(nodes, edges), [nodes, edges]);
+  const viewNodes = useMemo(() => (hidden.size ? nodes.map((n) => (hidden.has(n.id) ? { ...n, hidden: true } : n)) : nodes), [nodes, hidden]);
+  const viewEdges = useMemo(() => (hidden.size ? edges.map((e) => (hidden.has(e.target) ? { ...e, hidden: true } : e)) : edges), [edges, hidden]);
+
+  const toggleCollapse = useCallback(
+    (id) => {
+      setNodes((ns) => {
+        const toggled = ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, collapsed: !n.data.collapsed } } : n));
+        const nowHidden = hiddenIds(toggled, edges);
+        return layoutTree(toggled.map((n) => (nowHidden.has(n.id) && n.selected ? { ...n, selected: false } : n)), edges);
+      });
+    },
+    [edges],
+  );
+
+  const matches = useMemo(() => searchNodes(nodes, query), [nodes, query]);
+  const currentMatch = matches.length ? matches[Math.min(matchIndex, matches.length - 1)] : null;
+
+  const goToMatch = useCallback(
+    (i) => {
+      if (!matches.length) return;
+      const idx = (i + matches.length) % matches.length;
+      setMatchIndex(idx);
+      const id = matches[idx];
+      let next = latest.current.nodes;
+      if (hiddenIds(next, edges).has(id)) {
+        next = layoutTree(revealNode(next, edges, id), edges);
+        setNodes(next);
+      }
+      const p = next.find((n) => n.id === id)?.position;
+      if (p) setCenter(p.x + 90, p.y + 21, { zoom: Math.max(getZoom(), 0.9), duration: 300 });
+    },
+    [matches, edges, setCenter, getZoom],
+  );
+
+  const onQuery = (q) => {
+    setQuery(q);
+    setMatchIndex(0);
+  };
+  useEffect(() => {
+    if (searchOpen && query.trim() && matches.length) goToMatch(0);
+    // jump to the first result whenever the query changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
+  const viewInfo = useMemo(() => {
+    const childCounts = {};
+    for (const e of edges) childCounts[e.source] = (childCounts[e.source] ?? 0) + 1;
+    const hiddenCounts = {};
+    for (const n of nodes) if (n.data.collapsed) hiddenCounts[n.id] = descendants(edges, n.id).size;
+    return { childCounts, hiddenCounts, matches: new Set(searchOpen ? matches : []), currentMatch: searchOpen ? currentMatch : null, toggleCollapse };
+  }, [nodes, edges, matches, currentMatch, searchOpen, toggleCollapse]);
 
   // ---- Undo / redo ----
   latest.current = { nodes, edges };
@@ -345,6 +443,11 @@ export default function App() {
         save();
         return;
       }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && activeId) {
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
       if (isTyping(document.activeElement) || help || tourOpen || galleryOpen) return; // inputs keep their own text undo
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === 'z') {
@@ -376,7 +479,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, doUndo, doRedo]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, doUndo, doRedo, activeId]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -403,6 +506,7 @@ export default function App() {
         onDelete={deleteMap}
         onClose={() => setSidebarOpen(false)}
         onLoadDemo={loadDemo}
+        onImport={importFile}
         onTour={() => {
           setSidebarOpen(false);
           setTourOpen(true);
@@ -429,15 +533,17 @@ export default function App() {
               canRedo={canRedo(history)}
               onUndo={doUndo}
               onRedo={doRedo}
-              onExport={exportPng}
+              onSearch={() => setSearchOpen(true)}
+              onExport={exportAs}
               onTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               onHelp={() => setHelp(true)}
               onTour={() => setTourOpen(true)}
             />
             <div className="canvas" data-tour="canvas">
+              <ViewContext.Provider value={viewInfo}>
               <ReactFlow
-                nodes={nodes}
-                edges={edges}
+                nodes={viewNodes}
+                edges={viewEdges}
                 nodeTypes={nodeTypes}
                 defaultEdgeOptions={defaultEdgeOptions}
                 onNodesChange={onNodesChange}
@@ -455,6 +561,21 @@ export default function App() {
                 <Controls showInteractive={false} position="bottom-left" />
                 <MiniMap pannable zoomable position="bottom-right" nodeBorderRadius={10} nodeColor={minimapColor} className="minimap" />
               </ReactFlow>
+              </ViewContext.Provider>
+              {searchOpen && (
+                <SearchBar
+                  query={query}
+                  onQuery={onQuery}
+                  count={matches.length}
+                  index={Math.min(matchIndex, Math.max(matches.length - 1, 0))}
+                  onPrev={() => goToMatch(matchIndex - 1)}
+                  onNext={() => goToMatch(matchIndex + 1)}
+                  onClose={() => {
+                    setSearchOpen(false);
+                    setQuery('');
+                  }}
+                />
+              )}
               <p className="hint">
                 Double-click to edit · <kbd>Tab</kbd> child · <kbd>Enter</kbd> sibling · <kbd>?</kbd> shortcuts
               </p>

@@ -1,9 +1,13 @@
+import { useEffect, useRef, useState } from 'react';
 import {
   CircleAlert,
   CircleCheck,
   Compass,
   CornerDownRight,
   Download,
+  FileImage,
+  FileJson,
+  FileText,
   GitBranchPlus,
   Keyboard,
   Loader,
@@ -12,6 +16,7 @@ import {
   Moon,
   Network,
   Redo2,
+  Search,
   Sun,
   Trash2,
   Undo2,
@@ -40,12 +45,28 @@ export default function Toolbar({
   canRedo,
   onUndo,
   onRedo,
+  onSearch,
   onExport,
   onTheme,
   onHelp,
   onTour,
 }) {
   const S = STATUS[status] ?? STATUS.saved;
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef(null);
+
+  // Close the export menu when clicking anywhere else
+  useEffect(() => {
+    if (!exportOpen) return;
+    const close = (e) => !exportRef.current?.contains(e.target) && setExportOpen(false);
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [exportOpen]);
+
+  const pick = (kind) => {
+    setExportOpen(false);
+    onExport(kind);
+  };
   return (
     <header className="toolbar">
       <button className="icon-btn toolbar__menu" onClick={onMenu} aria-label="Open maps">
@@ -62,6 +83,9 @@ export default function Toolbar({
         </button>
         <button className="icon-btn" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl/⌘+Shift+Z)" aria-label="Redo">
           <Redo2 size={17} />
+        </button>
+        <button className="icon-btn" onClick={onSearch} title="Search ideas (Ctrl/⌘+K)" aria-label="Search ideas">
+          <Search size={17} />
         </button>
         <span className="toolbar__sep" />
         <button className="btn btn--ghost" onClick={onAddChild} disabled={!hasSelection} title="Add child (Tab)" data-tour="add-child">
@@ -81,9 +105,31 @@ export default function Toolbar({
         <button className="icon-btn" onClick={onFit} title="Fit to screen (F)" aria-label="Fit to screen">
           <Maximize size={17} />
         </button>
-        <button className="icon-btn" onClick={onExport} title="Export PNG" aria-label="Export as PNG">
-          <Download size={17} />
-        </button>
+        <span className="export" ref={exportRef}>
+          <button
+            className="icon-btn"
+            onClick={() => setExportOpen((v) => !v)}
+            title="Export"
+            aria-label="Export"
+            aria-haspopup="menu"
+            aria-expanded={exportOpen}
+          >
+            <Download size={17} />
+          </button>
+          {exportOpen && (
+            <div className="menu export__menu" role="menu">
+              <button role="menuitem" className="menu__item" onClick={() => pick('png')}>
+                <FileImage size={15} /> Image (PNG)
+              </button>
+              <button role="menuitem" className="menu__item" onClick={() => pick('pdf')}>
+                <FileText size={15} /> Document (PDF)
+              </button>
+              <button role="menuitem" className="menu__item" onClick={() => pick('json')}>
+                <FileJson size={15} /> Backup (JSON)
+              </button>
+            </div>
+          )}
+        </span>
         <button className="icon-btn" onClick={onTheme} title="Toggle theme" aria-label="Toggle light or dark theme">
           {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
         </button>

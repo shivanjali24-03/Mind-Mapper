@@ -27,11 +27,12 @@
 | 🌳 **Auto-arrange** | A tidy tree layout keeps branches from overlapping, however big the map gets |
 | ⌨️ **Keyboard first** | `Tab` adds a child, `Enter` a sibling, `Del` deletes a branch, `T` tidies, `F` fits to screen |
 | ↩️ **Undo / redo** | Ctrl/⌘+Z and Ctrl/⌘+Shift+Z (or Ctrl+Y), plus toolbar buttons. A whole drag or a burst of typing counts as one step; up to 100 steps per map |
+| 🔍 **Search & collapse** | Ctrl/⌘+K searches ideas and notes, highlights matches and jumps between them. Collapse any branch with one click; a badge shows how many ideas are hidden, and search opens collapsed branches automatically |
 | 📝 **Inspector panel** | Edit text, pick from 6 colours and add notes to any idea |
 | 💾 **Autosave** | Changes save automatically, with a live "Saving… / Saved" status |
 | 🗂️ **Many maps** | Sidebar with search, quick switching and safe two-step delete |
 | 🚀 **16 templates** | A searchable gallery with categories. **Basics:** Blank, Brainstorm · **Work:** Project plan, Product roadmap, Meeting notes, Sprint retrospective, Goals &amp; OKRs · **Strategy:** SWOT, Decision making, Problem solving (5 Whys), Customer journey, Business model · **Personal:** Study notes, Weekly planner, Event planning, Book summary |
-| 🖼️ **Export** | Download the whole map as a PNG |
+| 🖼️ **Export & import** | Download the whole map as **PNG**, **PDF** or a **JSON** backup, and import JSON files as new maps. Imported files are fully validated, and broken files show a clear message |
 | 🌗 **Light & dark** | Follows your system theme, with a one-click toggle |
 | 📱 **Responsive** | Slide-in sidebar and bottom-sheet inspector on phones |
 | 🧭 **Guided tour** | A 9-step interactive walkthrough with a spotlight on each control. It starts on the first visit and can be replayed from **Guide** |
@@ -105,7 +106,6 @@ npm run dev                             # http://localhost:3000
 ## 🗺️ Roadmap
 
 - [ ] Undo / redo (Command pattern)
-- [ ] Export to PDF and JSON import/export
 - [ ] Real-time collaboration (Socket.IO)
 - [ ] Live demo deployment
 
