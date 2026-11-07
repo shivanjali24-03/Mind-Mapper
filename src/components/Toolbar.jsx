@@ -59,6 +59,7 @@ export default function Toolbar({
   onHelp,
   onTour,
   onPresent,
+  pro,
   focusing,
   onFocus,
   viewMode,
@@ -155,10 +156,10 @@ export default function Toolbar({
                 <FileImage size={15} /> Image (PNG)
               </button>
               <button role="menuitem" className="menu__item" onClick={() => pick('pdf')}>
-                <FileText size={15} /> Document (PDF)
+                <FileText size={15} /> Document (PDF) {!pro && <span className="pro-tag">PRO</span>}
               </button>
               <button role="menuitem" className="menu__item" onClick={() => pick('json')}>
-                <FileJson size={15} /> Backup (JSON)
+                <FileJson size={15} /> Backup (JSON) {!pro && <span className="pro-tag">PRO</span>}
               </button>
               <button role="menuitem" className="menu__item" onClick={() => pick('md')}>
                 <ListTree size={15} /> Outline (Markdown)
@@ -185,6 +186,7 @@ export default function Toolbar({
         </button>
         <button className="btn btn--ghost" onClick={onPresent} title="Present this map (full screen)">
           <Presentation size={16} /> <span className="btn__text">Present</span>
+          {!pro && <span className="pro-tag">PRO</span>}
         </button>
         <button className="btn btn--ghost btn--guide" onClick={onTour} title="Guided tour" data-tour="guide">
           <Compass size={16} /> <span className="btn__text">Guide</span>

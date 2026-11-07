@@ -19,6 +19,7 @@ import Inspector from './components/Inspector.jsx';
 import { EmptyState, ShortcutsDialog, Toast } from './components/Overlays.jsx';
 // Loaded on demand: most sessions never open these, so they stay out of the first download
 const Tour = lazy(() => import('./components/Tour.jsx'));
+const PricingDialog = lazy(() => import('./components/PricingDialog.jsx'));
 const Presenter = lazy(() => import('./components/Presenter.jsx'));
 const PasteDialog = lazy(() => import('./components/PasteDialog.jsx'));
 const TemplateGallery = lazy(() => import('./components/Templates.jsx').then((m) => ({ default: m.TemplateGallery })));
@@ -33,6 +34,7 @@ import { breadcrumb, descendants, focusHidden, hiddenIds, revealNode, searchNode
 import FocusBar from './components/FocusBar.jsx';
 import { navigate } from './lib/navigate.js';
 import { buildSlides } from './lib/presentation.js';
+import { PLANS, PRO_ONLY, canCreateMap, canUse, isPro, parsePlan } from './lib/plans.js';
 import { rollUpProgress, taskList } from './lib/tasks.js';
 import TasksPanel from './components/TasksPanel.jsx';
 import OutlineView from './components/OutlineView.jsx';
@@ -96,6 +98,8 @@ export default function App() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [editRequest, setEditRequest] = useState(null);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [plan, setPlanState] = useState(() => parsePlan(safeGet(storageKey('plan'))));
+  const [pricing, setPricing] = useState(null); // null = closed, otherwise { reason }
   const [presenting, setPresenting] = useState(false);
   const [focusId, setFocusId] = useState(null);
   const focusRef = useRef(null);
@@ -219,6 +223,7 @@ export default function App() {
 
   // Map CRUD
   const createMap = async (templateKey) => {
+    if (!requireMapSlot()) return;
     const tpl = TEMPLATES[templateKey] ?? TEMPLATES.blank;
     const { nodes: n, edges: e } = tpl.build();
     const map = await storage.createMap({ title: tpl.name === 'Blank map' ? 'Untitled map' : tpl.name, nodes: n, edges: e });
@@ -321,6 +326,7 @@ export default function App() {
 
   const exportAs = async (kind) => {
     if (!getNodes().length) return;
+    if ((kind === 'pdf' || kind === 'json') && !requirePro(kind)) return;
     try {
       if (kind === 'copy-outline') {
         await navigator.clipboard.writeText(toOutline(nodes, edges));
@@ -357,6 +363,7 @@ export default function App() {
 
   // Create a new map from pasted text
   const createFromText = async (text) => {
+    if (!requireMapSlot()) return;
     try {
       const map = mapFromOutline(parseOutline(text));
       setPasteOpen(false);
@@ -396,6 +403,7 @@ export default function App() {
   });
 
   const importFile = async (file) => {
+    if (!requirePro('import') || !requireMapSlot()) return;
     try {
       const map = parseFile(await file.text());
       const created = await storage.createMap(map);
@@ -429,6 +437,7 @@ export default function App() {
   const slide = slides[slideIndex];
 
   const startPresenting = () => {
+    if (!requirePro('present')) return;
     if (viewMode !== 'map') setViewMode('map');
     setSearchOpen(false);
     setFocusId(null);
@@ -456,6 +465,33 @@ export default function App() {
     const t = setTimeout(() => fitView({ nodes: slide.ids.map((id) => ({ id })), padding: 0.3, duration: 650, maxZoom: 1.4 }), 80);
     return () => clearTimeout(t);
   }, [presenting, slide, fitView]);
+
+  // ---- Plans ----
+  const setPlan = (p) => {
+    setPlanState(p);
+    safeSet(storageKey('plan'), JSON.stringify(p));
+  };
+  // Returns true if allowed; otherwise opens the upgrade prompt with the reason
+  const requirePro = (feature) => {
+    if (canUse(plan, feature)) return true;
+    setPricing({ reason: PRO_ONLY[feature] });
+    return false;
+  };
+  const requireMapSlot = () => {
+    if (canCreateMap(plan, maps.length)) return true;
+    setPricing({ reason: `The Free plan includes ${PLANS.free.maxMaps} maps. Upgrade for unlimited maps, or delete a map you no longer need.` });
+    return false;
+  };
+  const upgrade = (billing) => {
+    setPlan({ id: 'pro', billing, since: new Date().toISOString().slice(0, 10) });
+    setPricing(null);
+    notify('Welcome to Pro! All features are unlocked (demo).');
+  };
+  const downgrade = () => {
+    setPlan({ id: 'free' });
+    setPricing(null);
+    notify('Switched to the Free plan');
+  };
 
   // ---- Focus mode ----
   const enterFocus = useCallback((id) => {
@@ -648,7 +684,7 @@ export default function App() {
         setSearchOpen(true);
         return;
       }
-      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen || pasteOpen || presenting) return; // inputs keep their own text undo
+      if (isTyping(document.activeElement) || help || tourOpen || galleryOpen || pasteOpen || presenting || pricing) return; // inputs keep their own text undo
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === 'z') {
         e.preventDefault();
@@ -704,7 +740,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection, toggleTask, presenting, focusId, enterFocus, exitFocus]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection, toggleTask, presenting, focusId, enterFocus, exitFocus, pricing]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -732,6 +768,8 @@ export default function App() {
         onClose={() => setSidebarOpen(false)}
         onLoadDemo={loadDemo}
         onImport={importFile}
+        plan={plan}
+        onPlan={() => setPricing({})}
         onPasteText={() => {
           setSidebarOpen(false);
           setPasteOpen(true);
@@ -765,6 +803,7 @@ export default function App() {
               onSearch={() => setSearchOpen(true)}
               onTasks={() => setTasksOpen((v) => !v)}
               onPresent={startPresenting}
+              pro={isPro(plan)}
               focusing={!!focusId}
               onFocus={() => (focusId ? exitFocus() : enterFocus(selected?.id))}
               tasksOpen={tasksOpen}
@@ -866,6 +905,7 @@ export default function App() {
 
       {help && <ShortcutsDialog onClose={() => setHelp(false)} />}
       <Suspense fallback={null}>
+      {pricing && <PricingDialog plan={plan} reason={pricing.reason} onUpgrade={upgrade} onDowngrade={downgrade} onClose={() => setPricing(null)} />}
       {pasteOpen && <PasteDialog onCreate={createFromText} onClose={() => setPasteOpen(false)} />}
       {galleryOpen && (
         <TemplateGallery
