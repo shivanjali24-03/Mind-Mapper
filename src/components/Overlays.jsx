@@ -30,6 +30,7 @@ const SHORTCUTS = [
   ['Tab', 'Add a child idea'],
   ['Enter', 'Add a sibling idea'],
   ['↑ ↓ ← →', 'Move between ideas'],
+  ['X', 'Make a task / tick it done'],
   ['F2 / Space or double-click', 'Edit text'],
   ['Delete / Backspace', 'Delete idea and its branches'],
   ['T', 'Tidy up the layout'],

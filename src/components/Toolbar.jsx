@@ -12,6 +12,7 @@ import {
   ListTree,
   GitBranchPlus,
   Keyboard,
+  ListChecks,
   Loader,
   Maximize,
   Menu,
@@ -48,6 +49,9 @@ export default function Toolbar({
   onUndo,
   onRedo,
   onSearch,
+  onTasks,
+  tasksOpen,
+  openTaskCount,
   onExport,
   onTheme,
   onHelp,
@@ -88,6 +92,16 @@ export default function Toolbar({
         </button>
         <button className="icon-btn" onClick={onSearch} title="Search ideas (Ctrl/⌘+K)" aria-label="Search ideas">
           <Search size={17} />
+        </button>
+        <button
+          className={`icon-btn tasks-btn${tasksOpen ? ' is-on' : ''}`}
+          onClick={onTasks}
+          title="Tasks"
+          aria-label={`Tasks (${openTaskCount} open)`}
+          aria-pressed={tasksOpen}
+        >
+          <ListChecks size={17} />
+          {openTaskCount > 0 && <span className="count-badge">{openTaskCount}</span>}
         </button>
         <span className="toolbar__sep" />
         <button className="btn btn--ghost" onClick={onAddChild} disabled={!hasSelection} title="Add child (Tab)" data-tour="add-child">
