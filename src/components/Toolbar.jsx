@@ -18,6 +18,7 @@ import {
   Menu,
   Moon,
   Network,
+  Focus,
   Presentation,
   Redo2,
   Search,
@@ -58,6 +59,8 @@ export default function Toolbar({
   onHelp,
   onTour,
   onPresent,
+  focusing,
+  onFocus,
   viewMode,
   onViewMode,
 }) {
@@ -170,6 +173,16 @@ export default function Toolbar({
           {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
         </button>
         </span>
+        <button
+          className={`icon-btn${focusing ? ' is-on' : ''}`}
+          onClick={onFocus}
+          disabled={!focusing && !hasSelection}
+          title={focusing ? 'Exit focus (Esc)' : 'Focus on this branch (Shift+F)'}
+          aria-label={focusing ? 'Exit focus' : 'Focus on selected branch'}
+          aria-pressed={focusing}
+        >
+          <Focus size={17} />
+        </button>
         <button className="btn btn--ghost" onClick={onPresent} title="Present this map (full screen)">
           <Presentation size={16} /> <span className="btn__text">Present</span>
         </button>

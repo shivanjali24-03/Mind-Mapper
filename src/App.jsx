@@ -29,7 +29,8 @@ import { storageKey } from './env.js';
 import { canRedo, canUndo, emptyHistory, record, redo, undo } from './lib/history.js';
 import { fileName, parseFile, toFile } from './lib/mapFile.js';
 import { addOutlineUnder, countOutline, mapFromOutline, parseOutline, toOutline } from './lib/outline.js';
-import { descendants, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
+import { breadcrumb, descendants, focusHidden, hiddenIds, revealNode, searchNodes } from './lib/mapView.js';
+import FocusBar from './components/FocusBar.jsx';
 import { navigate } from './lib/navigate.js';
 import { buildSlides } from './lib/presentation.js';
 import { rollUpProgress, taskList } from './lib/tasks.js';
@@ -96,6 +97,9 @@ export default function App() {
   const [editRequest, setEditRequest] = useState(null);
   const [tasksOpen, setTasksOpen] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  const [focusId, setFocusId] = useState(null);
+  const focusRef = useRef(null);
+  focusRef.current = focusId;
   const [slideIndex, setSlideIndex] = useState(0);
   const [viewMode, setViewMode] = useState(() => (safeGet(storageKey('view')) === 'outline' ? 'outline' : 'map'));
   const [searchOpen, setSearchOpen] = useState(false);
@@ -137,6 +141,7 @@ export default function App() {
         clearTimeout(settleTimer.current);
         stableRef.current = graphSnapshot(map.nodes ?? [], map.edges ?? []);
         setHistory(emptyHistory());
+        setFocusId(null);
         setStatus('saved');
         setSidebarOpen(false);
         safeSet(LAST_KEY, map.id);
@@ -426,6 +431,7 @@ export default function App() {
   const startPresenting = () => {
     if (viewMode !== 'map') setViewMode('map');
     setSearchOpen(false);
+    setFocusId(null);
     setSlideIndex(0);
     setPresenting(true);
     // Full screen where the browser allows it; the presentation works without it too
@@ -451,6 +457,25 @@ export default function App() {
     return () => clearTimeout(t);
   }, [presenting, slide, fitView]);
 
+  // ---- Focus mode ----
+  const enterFocus = useCallback((id) => {
+    if (!id) return;
+    setFocusId(id);
+    setViewMode('map');
+  }, []);
+  const exitFocus = useCallback(() => setFocusId(null), []);
+  // If the focused idea is deleted, leave focus
+  useEffect(() => {
+    if (focusId && !nodes.some((n) => n.id === focusId)) setFocusId(null);
+  }, [nodes, focusId]);
+  // Fit the view to whatever is visible when focus changes
+  useEffect(() => {
+    if (!activeId) return;
+    const t = setTimeout(() => fitView({ padding: 0.25, duration: 400 }), 60);
+    return () => clearTimeout(t);
+  }, [focusId, activeId, fitView]);
+  const focusTrail = useMemo(() => (focusId ? breadcrumb(nodes, edges, focusId) : []), [focusId, nodes, edges]);
+
   // ---- Tasks ----
   const progress = useMemo(() => rollUpProgress(nodes, edges), [nodes, edges]);
   const openTaskCount = useMemo(() => taskList(nodes).length, [nodes]);
@@ -465,6 +490,7 @@ export default function App() {
   const selectAndShow = useCallback(
     (id) => {
       let next = latest.current.nodes;
+      if (focusHidden(next, edges, focusRef.current).has(id)) setFocusId(null);
       if (hiddenIds(next, edges).has(id)) next = layoutTree(revealNode(next, edges, id), edges);
       setNodes(next.map((n) => ({ ...n, selected: n.id === id })));
       const p = next.find((n) => n.id === id)?.position;
@@ -474,9 +500,14 @@ export default function App() {
   );
 
   // ---- Collapse & search ----
-  const hidden = useMemo(() => hiddenIds(nodes, edges), [nodes, edges]);
+  // Hidden = inside collapsed branches, or outside the focused branch
+  const hidden = useMemo(() => {
+    const h = hiddenIds(nodes, edges);
+    for (const id of focusHidden(nodes, edges, focusId)) h.add(id);
+    return h;
+  }, [nodes, edges, focusId]);
   const viewNodes = useMemo(() => (hidden.size ? nodes.map((n) => (hidden.has(n.id) ? { ...n, hidden: true } : n)) : nodes), [nodes, hidden]);
-  const viewEdges = useMemo(() => (hidden.size ? edges.map((e) => (hidden.has(e.target) ? { ...e, hidden: true } : e)) : edges), [edges, hidden]);
+  const viewEdges = useMemo(() => (hidden.size ? edges.map((e) => (hidden.has(e.target) || hidden.has(e.source) ? { ...e, hidden: true } : e)) : edges), [edges, hidden]);
 
   const toggleCollapse = useCallback(
     (id) => {
@@ -498,6 +529,7 @@ export default function App() {
       const idx = (i + matches.length) % matches.length;
       setMatchIndex(idx);
       const id = matches[idx];
+      if (focusHidden(latest.current.nodes, edges, focusRef.current).has(id)) setFocusId(null);
       let next = latest.current.nodes;
       if (hiddenIds(next, edges).has(id)) {
         next = layoutTree(revealNode(next, edges, id), edges);
@@ -547,7 +579,9 @@ export default function App() {
   const moveSelection = useCallback(
     (dir) => {
       const { nodes: ns, edges: es } = latest.current;
-      const id = navigate(ns, es, ns.find((n) => n.selected)?.id ?? null, dir, hiddenIds(ns, es));
+      const h = hiddenIds(ns, es);
+      for (const x of focusHidden(ns, es, focusRef.current)) h.add(x);
+      const id = navigate(ns, es, ns.find((n) => n.selected)?.id ?? null, dir, h);
       if (!id) return;
       setNodes((list) => list.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })));
       keepInView(ns.find((n) => n.id === id));
@@ -632,6 +666,16 @@ export default function App() {
         moveSelection(ARROWS[e.key]);
         return;
       }
+      if (e.key === 'F' && e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        if (focusId && (!selected || selected.id === focusId)) exitFocus();
+        else if (selected) enterFocus(selected.id);
+        return;
+      }
+      if (e.key === 'Escape' && focusId) {
+        exitFocus();
+        return;
+      }
       if (e.key.toLowerCase() === 'x' && selected && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         toggleTask(selected.id);
@@ -660,7 +704,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection, toggleTask, presenting]);
+  }, [selected, add, removeSelected, save, fitView, help, tidy, tourOpen, galleryOpen, pasteOpen, doUndo, doRedo, activeId, moveSelection, toggleTask, presenting, focusId, enterFocus, exitFocus]);
 
   // Escape closes the help dialog
   useEffect(() => {
@@ -721,6 +765,8 @@ export default function App() {
               onSearch={() => setSearchOpen(true)}
               onTasks={() => setTasksOpen((v) => !v)}
               onPresent={startPresenting}
+              focusing={!!focusId}
+              onFocus={() => (focusId ? exitFocus() : enterFocus(selected?.id))}
               tasksOpen={tasksOpen}
               openTaskCount={openTaskCount}
               onExport={exportAs}
@@ -773,6 +819,7 @@ export default function App() {
                   }}
                 />
               )}
+              {focusId && !presenting && viewMode === 'map' && <FocusBar trail={focusTrail} onFocus={enterFocus} onExit={exitFocus} />}
               {presenting && slides.length > 0 && (
                 <Suspense fallback={null}>
                   <Presenter
